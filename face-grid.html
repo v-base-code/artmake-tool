@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>グリッド線診断</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#1a1310;color:#e8d9c8;touch-action:manipulation}
+  body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+  header{padding:env(safe-area-inset-top) 14px 8px;background:linear-gradient(180deg,#2a1f1a 0%,#1a1310 100%);border-bottom:1px solid #3d2e26;flex-shrink:0}
+  header > div{padding-top:6px}
+  .header-inner{display:flex;align-items:center;gap:10px}
+  .back-link{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid #3d2e26;border-radius:50%;color:#c17a4f;text-decoration:none;font-size:17px;line-height:1;flex-shrink:0;padding-bottom:2px}
+  .back-link:active{transform:scale(0.92);background:rgba(193,122,79,0.12)}
+  h1{font-family:"Georgia","游明朝",serif;font-size:13px;font-weight:500;letter-spacing:0.1em;color:#d4a574}
+  h1 span{color:#8a6244;font-size:10px;margin-left:6px;letter-spacing:0.05em}
+
+  #canvas-area{flex:1;position:relative;background:#0d0805;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0}
+  #canvas{max-width:100%;max-height:100%;display:block}
+
+  #upload-prompt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:20px;background:#0d0805;overflow-y:auto}
+  #upload-prompt.hidden{display:none}
+  .upload-ring{width:70px;height:70px;border:1px dashed #8a6244;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;flex-shrink:0}
+  .upload-ring::after{content:"＋";font-size:28px;color:#c17a4f;font-weight:300}
+  .upload-text{font-size:13px;text-align:center;line-height:1.7;color:#a08670}
+  .upload-text strong{color:#d4a574;font-weight:500}
+  .upload-tips{margin-top:22px;padding:14px 16px;background:rgba(42,31,26,0.5);border:1px solid #3d2e26;border-radius:10px;max-width:320px;width:100%}
+  .upload-tips-title{font-size:10px;color:#c17a4f;letter-spacing:0.15em;font-weight:600;margin-bottom:8px;text-transform:uppercase}
+  .upload-tips ul{list-style:none;padding:0;margin:0}
+  .upload-tips li{font-size:11.5px;color:#a08670;line-height:1.8;padding-left:14px;position:relative}
+  .upload-tips li::before{content:"・";position:absolute;left:2px;color:#8a6244}
+  .credit{margin-top:14px;font-size:9.5px;color:#5a4438;letter-spacing:0.05em;text-align:center}
+  .credit a{color:#8a6244;text-decoration:none}
+  .credit a:active{color:#c17a4f}
+
+  #loader{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(13,8,5,0.92);color:#d4a574;font-size:12px;z-index:10;letter-spacing:0.1em;flex-direction:column;gap:14px}
+  #loader.active{display:flex}
+  .spinner{width:28px;height:28px;border:2px solid #3d2e26;border-top-color:#c17a4f;border-radius:50%;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #error-msg{position:absolute;bottom:12px;left:12px;right:12px;background:rgba(120,40,30,0.95);color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;display:none;z-index:20;line-height:1.5}
+  #error-msg.active{display:block;animation:fadein 0.2s}
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+
+  #controls{flex-shrink:0;padding:8px 10px calc(6px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#1a1310 0%,#0d0805 100%);border-top:1px solid #3d2e26}
+
+  .label{font-size:9px;color:#8a6244;text-transform:uppercase;letter-spacing:0.18em;margin:2px 2px 5px;font-weight:500}
+
+  .btn-row{display:flex;gap:5px;margin-bottom:6px}
+  .btn{flex:1;padding:9px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.6);color:#a08670;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;min-height:36px;font-family:inherit}
+  .btn:active{transform:scale(0.97)}
+  .btn.active{background:linear-gradient(180deg,#c17a4f 0%,#a06038 100%);color:#fff;border-color:#c17a4f;box-shadow:0 0 0 1px rgba(193,122,79,0.3)}
+
+  .toggle-row{display:flex;gap:5px;margin-bottom:8px}
+  .toggle{flex:1;padding:7px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.4);color:#8a6244;border-radius:7px;font-size:10px;font-weight:500;cursor:pointer;min-height:32px;font-family:inherit;transition:all 0.15s}
+  .toggle.hidden{display:none}
+  .toggle:active{transform:scale(0.97)}
+  .toggle.active{background:rgba(138,98,68,0.25);color:#d4a574;border-color:#8a6244}
+
+  .action-row{display:flex;gap:6px}
+  .action-row.hidden{display:none}
+
+  /* 診断結果カード（controls内部、タブ上に配置） */
+  .diagnosis{flex-shrink:0;background:rgba(42,31,26,0.5);border:1px solid #3d2e26;border-radius:9px;padding:7px 12px 6px;margin-bottom:6px;display:none;cursor:pointer;transition:padding 0.15s}
+  .diagnosis.active{display:block}
+  .diag-header{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .diag-title{font-size:9px;color:#c17a4f;letter-spacing:0.2em;font-weight:600;text-transform:uppercase;flex:1}
+  .diag-toggle{color:#8a6244;font-size:10px;transition:transform 0.2s}
+  .diagnosis.collapsed{padding:6px 12px}
+  .diagnosis.collapsed .diag-toggle{transform:rotate(-90deg)}
+
+  /* 2列レイアウト: 左にマトリクス、右にテキスト */
+  .diag-body{display:flex;gap:10px;align-items:flex-start}
+  .diag-matrix{flex:0 0 64px;width:64px;height:64px;position:relative}
+  .diag-matrix-inner{position:absolute;inset:0;background:rgba(13,8,5,0.4);border:1px solid #3d2e26;border-radius:4px;background-image:linear-gradient(to right, transparent 19%, rgba(138,98,68,0.12) 19%, rgba(138,98,68,0.12) 20%, transparent 20%, transparent 39%, rgba(138,98,68,0.12) 39%, rgba(138,98,68,0.12) 40%, transparent 40%, transparent 59%, rgba(138,98,68,0.12) 59%, rgba(138,98,68,0.12) 60%, transparent 60%, transparent 79%, rgba(138,98,68,0.12) 79%, rgba(138,98,68,0.12) 80%, transparent 80%),linear-gradient(to bottom, transparent 19%, rgba(138,98,68,0.12) 19%, rgba(138,98,68,0.12) 20%, transparent 20%, transparent 39%, rgba(138,98,68,0.12) 39%, rgba(138,98,68,0.12) 40%, transparent 40%, transparent 59%, rgba(138,98,68,0.12) 59%, rgba(138,98,68,0.12) 60%, transparent 60%, transparent 79%, rgba(138,98,68,0.12) 79%, rgba(138,98,68,0.12) 80%, transparent 80%)}
+  .diag-matrix-label{position:absolute;font-size:7px;color:#6d5440;letter-spacing:0.02em;line-height:1}
+  .diag-matrix-label.tl{top:3px;left:3px}
+  .diag-matrix-label.tr{top:3px;right:3px}
+  .diag-matrix-label.bl{bottom:3px;left:3px}
+  .diag-matrix-label.br{bottom:3px;right:3px}
+  .diag-matrix-axis-h{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(138,98,68,0.3)}
+  .diag-matrix-axis-v{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(138,98,68,0.3)}
+  .diag-matrix-dot{position:absolute;width:9px;height:9px;border-radius:50%;background:#c17a4f;border:2px solid #d4a574;transform:translate(-50%,-50%);transition:left 0.2s,top 0.2s;box-shadow:0 0 8px rgba(193,122,79,0.6)}
+
+  .diag-text{flex:1;min-width:0}
+  .diag-type{font-family:"Georgia","游明朝",serif;font-size:13px;font-weight:500;letter-spacing:0.08em;color:#d4a574;line-height:1.4}
+  .diagnosis.collapsed .diag-type{font-size:11.5px}
+  .diag-type .x{color:#8a6244;margin:0 4px;font-size:11px}
+  .diag-keywords{font-size:10px;color:#c17a4f;margin-top:3px;letter-spacing:0.05em;line-height:1.4}
+  .diagnosis.collapsed .diag-keywords{font-size:9.5px;margin-top:2px}
+  .diag-impression{font-size:10.5px;color:#a08670;line-height:1.5;margin-top:4px}
+  .diagnosis.collapsed .diag-impression{display:none}
+  .diagnosis.collapsed .diag-metrics{display:none}
+  .diag-metrics{display:flex;gap:10px;margin-top:4px;font-size:9.5px;color:#a08670;letter-spacing:0.05em;align-items:center}
+  .diag-metrics strong{color:#d4a574;font-weight:600;font-size:10.5px}
+  .diag-metrics .metric-label{color:#5a4438;font-size:8.5px;margin-left:2px}
+  .slider-scroll{overflow-y:auto;height:100%;padding-right:2px;-webkit-overflow-scrolling:touch}
+  .slider-row{display:flex;align-items:center;gap:10px;padding:2px 0}
+  .slider-label{flex:0 0 92px;font-size:11px;color:#d4a574;display:flex;align-items:center;gap:6px;letter-spacing:0.02em}
+  .slider-label .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .slider-label .auto-badge{font-size:9px;color:#ffa94d;margin-left:3px}
+  .slider{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:#3d2e26;border-radius:2px;outline:none;margin:0}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#c17a4f;border:2px solid #d4a574;cursor:pointer}
+  .slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#c17a4f;border:2px solid #d4a574;cursor:pointer;border:none}
+  .slider-row.modified .slider::-webkit-slider-thumb{background:#d4a574;border-color:#e8d9c8}
+  .action{flex:1;padding:9px;background:transparent;color:#a08670;border:1px solid #3d2e26;border-radius:7px;font-size:11px;cursor:pointer;min-height:34px;font-family:inherit;font-weight:500}
+  .action.icon-btn{flex:0 0 38px;font-size:16px;line-height:1;padding:0}
+  .action:active{transform:scale(0.96);background:rgba(193,122,79,0.12)}
+  .action.primary{background:#3d2e26;color:#d4a574;border-color:#5a4438}
+
+  .adj-status-row{display:flex;align-items:center;padding:4px 2px;min-height:24px}
+  .adj-status{color:#6d5440;font-size:10px;letter-spacing:0.05em;line-height:1.3}
+
+  /* タブ */
+  .tab-row{display:flex;gap:4px;margin-bottom:4px;border-bottom:1px solid #3d2e26;padding-bottom:3px}
+  .tab-btn{flex:1;padding:6px;background:transparent;color:#6d5440;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.08em}
+  .tab-btn.active{background:rgba(193,122,79,0.15);color:#d4a574}
+  .tab-btn:active{transform:scale(0.97)}
+  .tab-body{height:130px;position:relative;margin-bottom:4px}
+  .tab-content{position:absolute;inset:0}
+  .tab-content{position:absolute;top:0;left:0;right:0;bottom:0}
+  .tab-content.hidden{display:none}
+
+  /* 調整ボタン */
+  .adj-btn{flex:1;padding:9px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.5);color:#d4a574;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;min-height:36px;font-family:inherit;transition:background 0.1s}
+  .adj-btn:active{transform:scale(0.94);background:rgba(193,122,79,0.25)}
+
+  /* 色ボタン */
+  .color-row{display:flex;gap:4px}
+  .color-btn{flex:1;padding:8px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.5);color:#a08670;border-radius:7px;font-size:10px;font-weight:500;cursor:pointer;min-height:38px;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .color-btn .cdot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15)}
+  .color-btn.active{background:rgba(193,122,79,0.2);border-color:#c17a4f;color:#d4a574}
+  .color-btn:active{transform:scale(0.95)}
+
+  input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;left:-9999px}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><a class="back-link" href="./index.html" aria-label="メニューへ戻る">‹</a><h1>グリッド線診断 <span>Artmake Tool</span></h1></div></header>
+
+<div id="canvas-area">
+  <canvas id="canvas"></canvas>
+  <div id="upload-prompt">
+    <div class="upload-ring"></div>
+    <div class="upload-text"><strong>正面向きの顔写真</strong>をタップ<br>画像は端末内で処理されます</div>
+    <div class="upload-tips">
+      <div class="upload-tips-title">撮影のコツ</div>
+      <ul>
+        <li>顔全体（髪の生え際〜顎）が写るように</li>
+        <li>正面向き・カメラ目線で</li>
+        <li>顎を引きすぎず・上げすぎず</li>
+        <li>明るい均一光、影が出ない環境で</li>
+        <li>前髪なし・おでこを全て出して撮影</li>
+        <li>髪色と肌色のコントラストがはっきり出るよう撮影</li>
+      </ul>
+    </div>
+    <div class="credit">Powered by <a href="https://google.github.io/mediapipe/" target="_blank" rel="noopener">MediaPipe</a> (Apache 2.0)</div>
+  </div>
+  <div id="loader"><div class="spinner"></div><div>顔を検出しています…</div></div>
+  <div id="error-msg"></div>
+  <input type="file" id="file-input" accept="image/*">
+</div>
+
+<div id="controls">
+  <div class="diagnosis collapsed" id="diagnosis">
+    <div class="diag-header">
+      <div class="diag-title">Face Diagnosis</div>
+      <div class="diag-toggle">▾</div>
+    </div>
+    <div class="diag-body">
+      <div class="diag-matrix" aria-hidden="true">
+        <div class="diag-matrix-inner">
+          <span class="diag-matrix-label tl">上×遠</span>
+          <span class="diag-matrix-label tr">上×求</span>
+          <span class="diag-matrix-label bl">下×遠</span>
+          <span class="diag-matrix-label br">下×求</span>
+          <span class="diag-matrix-axis-h"></span>
+          <span class="diag-matrix-axis-v"></span>
+          <span class="diag-matrix-dot" id="diag-matrix-dot"></span>
+        </div>
+      </div>
+      <div class="diag-text">
+        <div class="diag-type" id="diag-type"></div>
+        <div class="diag-keywords" id="diag-keywords"></div>
+        <div class="diag-impression" id="diag-impression"></div>
+        <div class="diag-metrics" id="diag-metrics"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab-btn active" data-tab="horizontal">横線</button>
+    <button class="tab-btn" data-tab="vertical">縦線</button>
+  </div>
+
+  <div class="tab-body">
+  <div class="tab-content" data-tab-content="horizontal">
+    <div class="slider-scroll">
+      <div class="slider-row" data-line="hairline">
+        <div class="slider-label"><span class="dot" style="background:#30d158"></span>生え際<span class="auto-badge" id="badge-hairline"></span></div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="browBottom">
+        <div class="slider-label"><span class="dot" style="background:#ffd60a"></span>眉下</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="noseBottom">
+        <div class="slider-label"><span class="dot" style="background:#ff9f0a"></span>鼻下</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="chinBottom">
+        <div class="slider-label"><span class="dot" style="background:#ff453a"></span>顎下</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content hidden" data-tab-content="vertical">
+    <div class="slider-scroll">
+      <div class="slider-row" data-line="faceLeft">
+        <div class="slider-label"><span class="dot" style="background:#ff9f0a"></span>左輪郭</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="faceRight">
+        <div class="slider-label"><span class="dot" style="background:#ff9f0a"></span>右輪郭</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="faceCenter">
+        <div class="slider-label"><span class="dot" style="background:#ff453a"></span>中心</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="eyeInnerR">
+        <div class="slider-label"><span class="dot" style="background:#5ec0ff"></span>目頭（右）</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="eyeInnerL">
+        <div class="slider-label"><span class="dot" style="background:#5ec0ff"></span>目頭（左）</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="eyeOuterR">
+        <div class="slider-label"><span class="dot" style="background:#64d2ff"></span>目尻（右）</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+      <div class="slider-row" data-line="eyeOuterL">
+        <div class="slider-label"><span class="dot" style="background:#64d2ff"></span>目尻（左）</div>
+        <input type="range" class="slider" min="-1" max="1" step="0.005" value="0">
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="action-row">
+    <button class="action" id="reset-all">全リセット</button>
+    <button class="action icon-btn" id="rotate-btn" aria-label="画像を90度回転" title="画像を回転">↻</button>
+    <button class="action" id="re-upload">写真変更</button>
+    <button class="action primary" id="save-btn">画像を保存</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+<script>
+(()=>{
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const fileInput = document.getElementById('file-input');
+  const uploadPrompt = document.getElementById('upload-prompt');
+  const loader = document.getElementById('loader');
+  const errorMsg = document.getElementById('error-msg');
+
+  let currentImage = null;
+  let currentLandmarks = null;
+  let faceMesh = null;
+  // 検出した生え際Y（画像ピクセル単位）。null = 検出失敗
+  let detectedHairY = null;
+
+  // 各線の手動オフセット（-1〜+1、描画時に画像サイズと組み合わせて適用）
+  // 横線: Y方向のオフセット（画像高さの±10%相当）
+  // 縦線: X方向のオフセット（顔幅の±15%相当）
+  const offsets = {
+    hairline: 0, browBottom: 0, noseBottom: 0, chinBottom: 0,
+    faceLeft: 0, faceRight: 0, faceCenter: 0,
+    eyeInnerR: 0, eyeInnerL: 0, eyeOuterR: 0, eyeOuterL: 0
+  };
+
+  // ランドマーク定義（眉下は複数点から最下を動的選出）
+  const LM = {
+    faceLeft: 234, faceRight: 454, faceCenter: 168,
+    eyeInnerR: 133, eyeInnerL: 362,
+    eyeOuterR: 33, eyeOuterL: 263,
+    nostrilR: 98, nostrilL: 327,
+    noseBottom: 2, chinBottom: 152, faceTop: 10
+  };
+  const BROW_BOTTOM_CANDIDATES = [65,66,52,53,295,296,282,283];
+
+  // === エラー表示 ===
+  function showError(msg){
+    errorMsg.textContent = msg;
+    errorMsg.style.display = 'block';
+    setTimeout(() => { errorMsg.style.display = 'none'; }, 3500);
+  }
+
+  // === Canvas表示サイズ調整 ===
+  function setupCanvas(img){
+    const area = document.getElementById('canvas-area');
+    const aw = area.clientWidth, ah = area.clientHeight;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const scale = Math.min(aw / img.width, ah / img.height);
+    canvas.style.width = (img.width * scale) + 'px';
+    canvas.style.height = (img.height * scale) + 'px';
+  }
+
+  function scaleUnit(){
+    return Math.max(1, canvas.width / 480);
+  }
+
+  // === 画像アップロード ===
+  // createImageBitmap({imageOrientation:'from-image'})で全環境統一的にEXIF補正
+  let currentFile = null;      // 再読込用にFileオブジェクト保持
+  let userRotation = 0;         // ユーザーが手動で回転した角度（0/90/180/270）
+
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    if(file.size > 15 * 1024 * 1024){
+      showError('画像が大きすぎます（15MB以下）');
+      return;
+    }
+    currentFile = file;
+    userRotation = 0;
+    loadImageFromFile(file, 0);
+  });
+
+  // Fileから画像を読み込み、指定角度回転を適用してcurrentImageにセット
+  async function loadImageFromFile(file, rotationDeg){
+    document.getElementById('diagnosis').classList.remove('active');
+    uploadPrompt.classList.add('hidden');
+    loader.classList.add('active');
+
+    try {
+      let bitmap = null;
+      // createImageBitmapでEXIF補正込みで読込
+      if(typeof createImageBitmap === 'function'){
+        try {
+          bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        } catch(e1){
+          // imageOrientationオプション非対応の環境はそのまま読込（ブラウザのデフォルト挙動）
+          try { bitmap = await createImageBitmap(file); } catch(e2){ bitmap = null; }
+        }
+      }
+
+      let workCanvas;
+      if(bitmap){
+        // ユーザー回転を適用したcanvasを作成
+        workCanvas = rotateToCanvas(bitmap, rotationDeg);
+      } else {
+        // フォールバック: Image タグ経由で読み込む
+        const dataUrl = await fileToDataUrl(file);
+        const img = await loadImageElement(dataUrl);
+        workCanvas = rotateToCanvas(img, rotationDeg);
+      }
+
+      // 最大辺2000pxにリサイズ
+      const maxSide = 2000;
+      if(workCanvas.width > maxSide || workCanvas.height > maxSide){
+        const scale = maxSide / Math.max(workCanvas.width, workCanvas.height);
+        const newW = Math.round(workCanvas.width * scale);
+        const newH = Math.round(workCanvas.height * scale);
+        const tmp = document.createElement('canvas');
+        tmp.width = newW; tmp.height = newH;
+        tmp.getContext('2d').drawImage(workCanvas, 0, 0, newW, newH);
+        workCanvas = tmp;
+      }
+
+      const finalImg = await loadImageElement(workCanvas.toDataURL('image/jpeg', 0.92));
+      currentImage = finalImg;
+      setupCanvas(finalImg);
+      ctx.drawImage(finalImg, 0, 0);
+      detectFace();
+    } catch(err) {
+      console.error('[loadImage] error:', err);
+      loader.classList.remove('active');
+      uploadPrompt.classList.remove('hidden');
+      showError('画像の読み込みに失敗しました');
+    }
+  }
+
+  function fileToDataUrl(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('READ_FAIL'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  function loadImageElement(src){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('DECODE_FAIL'));
+      img.src = src;
+    });
+  }
+
+  // imgLike (Image or ImageBitmap) を rotationDeg だけ回転した Canvas を返す
+  function rotateToCanvas(imgLike, rotationDeg){
+    const deg = ((rotationDeg % 360) + 360) % 360;
+    const w = imgLike.width, h = imgLike.height;
+    const c = document.createElement('canvas');
+    const cctx = c.getContext('2d');
+    if(deg === 0){
+      c.width = w; c.height = h;
+      cctx.drawImage(imgLike, 0, 0);
+    } else if(deg === 90){
+      c.width = h; c.height = w;
+      cctx.translate(h, 0);
+      cctx.rotate(Math.PI / 2);
+      cctx.drawImage(imgLike, 0, 0);
+    } else if(deg === 180){
+      c.width = w; c.height = h;
+      cctx.translate(w, h);
+      cctx.rotate(Math.PI);
+      cctx.drawImage(imgLike, 0, 0);
+    } else if(deg === 270){
+      c.width = h; c.height = w;
+      cctx.translate(0, w);
+      cctx.rotate(-Math.PI / 2);
+      cctx.drawImage(imgLike, 0, 0);
+    }
+    return c;
+  }
+
+  // === MediaPipe初期化 ===
+  function initFaceMesh(){
+    if(faceMesh) return;
+    faceMesh = new FaceMesh({
+      locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${f}`
+    });
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults(onFaceMeshResults);
+  }
+
+  function onFaceMeshResults(results){
+    loader.classList.remove('active');
+    if(!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0){
+      showError('顔を検出できませんでした');
+      uploadPrompt.classList.remove('hidden');
+      currentImage = null;
+      return;
+    }
+    currentLandmarks = results.multiFaceLandmarks[0];
+
+    // 1) 生え際検出のために一度描画（この時点ではdiagnosisはまだ非表示なのでレイアウトは初期状態）
+    setupCanvas(currentImage);
+    try {
+      ctx.drawImage(currentImage, 0, 0);
+      detectedHairY = detectHairline(currentLandmarks, canvas.width, canvas.height);
+    } catch(e) {
+      console.error('[hairline] error:', e);
+      detectedHairY = null;
+    }
+    updateHairlineBadge();
+
+    // 2) 診断カードを表示（これによりレイアウトが変化）
+    updateDiagnosis(currentLandmarks, canvas.width, canvas.height);
+
+    // 3) 2段階のrequestAnimationFrameでレイアウト確定を確実に待つ
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          setupCanvas(currentImage);
+          render();
+        } catch(e) {
+          console.error('[render] error:', e);
+          // renderが失敗しても画像だけは見せる
+          ctx.drawImage(currentImage, 0, 0);
+        }
+      });
+    });
+  }
+
+  async function detectFace(){
+    try{
+      initFaceMesh();
+      await faceMesh.send({image: currentImage});
+    }catch(e){
+      console.error(e);
+      loader.classList.remove('active');
+      showError('顔検出に失敗しました');
+      uploadPrompt.classList.remove('hidden');
+    }
+  }
+
+  // === 生え際自動検出（方法B） ===
+  function detectHairline(lm, w, h){
+    const browR = lm[55];
+    const browL = lm[285];
+    const faceTop = lm[10];
+    const faceCenter = lm[168];
+
+    const centerX = faceCenter.x * w;
+    const halfWidth = Math.abs(browL.x - browR.x) * w * 0.25;
+    const sampleCount = 5;
+    const sampleXs = [];
+    for(let i = 0; i < sampleCount; i++){
+      const t = (i / (sampleCount - 1)) * 2 - 1;
+      sampleXs.push(Math.round(centerX + t * halfWidth));
+    }
+
+    const yMin = Math.max(0, Math.round(faceTop.y * h) - Math.round(h * 0.08));
+    const yMax = Math.round(Math.min(browR.y, browL.y) * h) - 5;
+    if(yMax - yMin < 20) return null;
+
+    const skinY = Math.round((browR.y + faceCenter.y) * h * 0.5);
+    const refX = Math.round(centerX);
+    let skinImg;
+    try{
+      skinImg = ctx.getImageData(refX - 5, skinY - 2, 10, 4).data;
+    }catch(e){ return null; }
+
+    let sR = 0, sG = 0, sB = 0, count = 0;
+    for(let i = 0; i < skinImg.length; i += 4){
+      sR += skinImg[i]; sG += skinImg[i+1]; sB += skinImg[i+2];
+      count++;
+    }
+    if(count === 0) return null;
+    sR /= count; sG /= count; sB /= count;
+
+    const results = [];
+    for(const sx of sampleXs){
+      const y = findSkinHairBoundary(sx, yMax, yMin, sR, sG, sB, w, h);
+      if(y !== null) results.push(y);
+    }
+    if(results.length < 3) return null;
+    results.sort((a, b) => a - b);
+    return results[Math.floor(results.length / 2)];
+  }
+
+  function findSkinHairBoundary(x, yStart, yEnd, skinR, skinG, skinB, w, h){
+    if(x < 2 || x >= w - 2) return null;
+    const threshold = 55;
+    for(let y = yStart; y >= yEnd; y--){
+      let img;
+      try{
+        img = ctx.getImageData(x - 1, y, 3, 1).data;
+      }catch(e){ return null; }
+      let r = 0, g = 0, b = 0;
+      for(let i = 0; i < 3; i++){
+        r += img[i*4]; g += img[i*4+1]; b += img[i*4+2];
+      }
+      r /= 3; g /= 3; b /= 3;
+      const dist = Math.sqrt((r-skinR)**2 + (g-skinG)**2 + (b-skinB)**2);
+      if(dist > threshold) return y + 1;
+    }
+    return null;
+  }
+
+  function updateHairlineBadge(){
+    const el = document.getElementById('badge-hairline');
+    if(!el) return;
+    el.textContent = detectedHairY === null ? '(自動失敗)' : '(自動)';
+    el.style.color = detectedHairY === null ? '#ff9500' : '#6d5440';
+  }
+
+  // === 顔タイプ診断 ===
+  // R_h: 目と目の間の距離 / 片目の横幅
+  //   < 0.95: 求心  / 0.95-1.05: 標準 / > 1.05: 遠心
+  // R_v: 生え際→目センターライン / 生え際→顎
+  //   < 0.5: 上重心 / > 0.5: 下重心
+  const IMPRESSIONS = {
+    'centripetal-up':   {name: '上重心×求心', keywords: '知的 / 真面目 / 信頼 / しっかり者', desc: 'パーツが中央に寄り、位置が高め。小顔感と若々しさがあり、目が強調されて意志の強さを感じさせる印象です。'},
+    'centripetal-down': {name: '下重心×求心', keywords: '聡明 / 爽やか / 賢い', desc: 'パーツが中央に寄り、位置が低め。面長感が出やすく、知性的で落ち着いた大人っぽい印象です。'},
+    'centrifugal-up':   {name: '上重心×遠心', keywords: '柔らかい / 優しい / 穏やか', desc: 'パーツが離れ、位置が高め。柔らかく親しみやすく、愛嬌のある印象です。'},
+    'centrifugal-down': {name: '下重心×遠心', keywords: '親しみ / 陽気 / 可愛らしい / 幼い', desc: 'パーツが離れ、位置が低め。おだやかで余裕があり、ミステリアスでナチュラルな印象です。'},
+    'standard-up':      {name: '上重心×標準', keywords: 'バランス型 / 若々しい', desc: '横方向は標準的で、位置がやや高め。バランスが取れつつ若々しい印象です。'},
+    'standard-down':    {name: '下重心×標準', keywords: 'バランス型 / 落ち着き', desc: '横方向は標準的で、位置がやや低め。バランスが取れつつ落ち着いた印象です。'}
+  };
+
+  function updateDiagnosis(lm, w, h){
+    const el = document.getElementById('diagnosis');
+    if(!lm){ el.classList.remove('active'); return; }
+
+    // === 横軸（重心）: 3区間比 a:b:c で判定 ===
+    // a = 生え際 〜 眉下
+    // b = 眉下 〜 鼻下
+    // c = 鼻下 〜 顎下
+    // 生え際: 上方向（マイナス）は3倍の可動域
+    const hairlineAdj = offsets.hairline < 0
+      ? offsets.hairline * h * 0.30
+      : offsets.hairline * h * 0.10;
+    const hairlineY = (detectedHairY !== null ? detectedHairY : lm[10].y * h) + hairlineAdj;
+    const browBottomY = Math.max(...BROW_BOTTOM_CANDIDATES.map(i => lm[i].y)) * h + offsets.browBottom * h * 0.10;
+    const noseBottomY = lm[2].y * h + offsets.noseBottom * h * 0.10;
+    const chinY = lm[152].y * h + offsets.chinBottom * h * 0.10;
+
+    const a = Math.max(1, browBottomY - hairlineY);
+    const b = Math.max(1, noseBottomY - browBottomY);
+    const c = Math.max(1, chinY - noseBottomY);
+
+    // 縦重心: a が最大なら「下重心」、それ以外（b or c が最大）なら「上重心」
+    const vKey = (a >= b && a >= c) ? 'down' : 'up';
+    // 強度: a の突出度合いで判定
+    // averageOthers = b,c の平均。a がそれより10%以上大きい→強い下重心
+    const avgOthers = (b + c) / 2;
+    const aDiff = (a - avgOthers) / avgOthers; // +なら a が大きい, −なら小さい
+    const vIntensity = Math.abs(aDiff) > 0.15 ? 'strong' : 'mild';
+
+    // === 縦軸（求心/遠心）: d:e:f:g:h で判定 ===
+    // d = 左輪郭 〜 左目尻（画像上ではX値的に右端→右目尻になる）
+    // 注: 左右は「人から見た左右」＝画面上は逆。内部的には座標値で扱う
+    const faceLeftX   = lm[234].x * w + offsets.faceLeft * Math.abs(lm[454].x - lm[234].x) * w * 0.15;
+    const faceRightX  = lm[454].x * w + offsets.faceRight * Math.abs(lm[454].x - lm[234].x) * w * 0.15;
+    const eyeOuterRX  = lm[33].x * w  + offsets.eyeOuterR * Math.abs(lm[454].x - lm[234].x) * w * 0.15; // 右目尻
+    const eyeInnerRX  = lm[133].x * w + offsets.eyeInnerR * Math.abs(lm[454].x - lm[234].x) * w * 0.15; // 右目頭
+    const eyeInnerLX  = lm[362].x * w + offsets.eyeInnerL * Math.abs(lm[454].x - lm[234].x) * w * 0.15; // 左目頭
+    const eyeOuterLX  = lm[263].x * w + offsets.eyeOuterL * Math.abs(lm[454].x - lm[234].x) * w * 0.15; // 左目尻
+
+    // 画像X座標では: faceLeft < eyeOuterR < eyeInnerR < eyeInnerL < eyeOuterL < faceRight
+    // d = 顔の左端〜右目尻、e = 右目尻〜右目頭、f = 両目頭間、g = 左目頭〜左目尻、h = 左目尻〜顔の右端
+    const d = Math.max(1, eyeOuterRX - faceLeftX);
+    const e = Math.max(1, eyeInnerRX - eyeOuterRX);
+    const f = Math.max(1, eyeInnerLX - eyeInnerRX);
+    const g = Math.max(1, eyeOuterLX - eyeInnerLX);
+    const hh = Math.max(1, faceRightX - eyeOuterLX);
+
+    // f と e,g の関係で判定
+    const eyeWidthAvg = (e + g) / 2;
+    let hKey, hIntensity;
+    if(f > e && f > g){
+      hKey = 'centrifugal'; // 遠心
+      // 強度: f が eyeWidthAvg の何%大きいか。25%超で強い遠心
+      hIntensity = (f / eyeWidthAvg - 1) > 0.25 ? 'strong' : 'mild';
+    } else if(f < e && f < g){
+      hKey = 'centripetal'; // 求心
+      hIntensity = (1 - f / eyeWidthAvg) > 0.12 ? 'strong' : 'mild';
+    } else {
+      // f が e か g のどちらかより大きく、どちらかより小さい場合（左右非対称）
+      hKey = 'standard';
+      hIntensity = 'neutral';
+    }
+
+    const typeKey = `${hKey}-${vKey}`;
+    const impression = IMPRESSIONS[typeKey] || IMPRESSIONS['standard-down'];
+
+    // ラベル表記
+    const hBase = hKey === 'centripetal' ? '求心顔' : hKey === 'centrifugal' ? '遠心顔' : '標準';
+    const hLabel = hIntensity === 'mild' && hKey !== 'standard' ? `やや${hBase}` : hBase;
+    const vBase = vKey === 'up' ? '上重心' : '下重心';
+    const vLabel = vIntensity === 'mild' ? `やや${vBase}` : vBase;
+
+    document.getElementById('diag-type').innerHTML = `${hLabel}<span class="x">×</span>${vLabel}`;
+    document.getElementById('diag-keywords').textContent = impression.keywords;
+    document.getElementById('diag-impression').textContent = impression.desc;
+
+    // === マトリクスの現在地プロット ===
+    // 左=遠心、右=求心、上=上重心、下=下重心
+    const clamp = (v, a2, b2) => Math.max(a2, Math.min(b2, v));
+    // 横軸: f/eyeWidthAvg の比。1.0=基準、<1=求心寄り、>1=遠心寄り
+    // 0.7で右端(強い求心), 1.0で中央, 1.4で左端(強い遠心)
+    const fRatio = f / Math.max(1, eyeWidthAvg);
+    const plotX = (1 - clamp((fRatio - 0.7) / (1.4 - 0.7), 0, 1)) * 100;
+    // 縦軸: aDiff を使用。+0.3で下端(強い下重心), 0で中央, -0.3で上端(強い上重心)
+    const plotY = clamp((aDiff + 0.3) / 0.6, 0, 1) * 100;
+    const dot = document.getElementById('diag-matrix-dot');
+    if(dot){
+      dot.style.left = plotX + '%';
+      dot.style.top = plotY + '%';
+    }
+
+    // === 相対値表示 -100〜+100 ===
+    // 横: -100=強い求心, 0=標準, +100=強い遠心
+    const relH = Math.round(clamp((fRatio - 1.0) / 0.4, -1, 1) * 100);
+    // 縦: -100=強い上重心, 0=境界, +100=強い下重心
+    const relV = Math.round(clamp(aDiff / 0.3, -1, 1) * 100);
+    const relHSign = relH > 0 ? '+' : '';
+    const relVSign = relV > 0 ? '+' : '';
+    document.getElementById('diag-metrics').innerHTML =
+      `横: <strong>${relHSign}${relH}</strong> <span class="metric-label">(求心 ⇔ 遠心)</span>&nbsp; 縦: <strong>${relVSign}${relV}</strong> <span class="metric-label">(上 ⇔ 下)</span>`;
+
+    el.classList.add('active');
+  }
+
+
+  // 返り値: {lines: [{id, orient, px, color, label}, ...]}
+  // orient = 'h' または 'v'
+  function computeLines(lm, w, h){
+    const P = i => ({x: lm[i].x * w, y: lm[i].y * h});
+
+    // 横線のベース値
+    const hairlineBase = detectedHairY !== null ? detectedHairY : P(10).y;
+    const browBottomBase = Math.max(...BROW_BOTTOM_CANDIDATES.map(i => P(i).y));
+    const noseBottomBase = P(2).y;
+    const chinBase = P(152).y;
+
+    // 横線のオフセット倍率: 画像高さの±10%
+    const hOff = h * 0.10;
+    // 生え際のみ: 上方向（マイナス）は3倍の可動域（画像高さの最大30%上まで）
+    //  自動判定のボラティリティが大きいため上方向を広く取る
+    const hairlineOffset = offsets.hairline < 0
+      ? offsets.hairline * h * 0.30  // 上方向（マイナス）は最大30%上まで
+      : offsets.hairline * h * 0.10; // 下方向は従来通り最大10%
+    // 縦線のオフセット倍率: 顔幅の±15%
+    const faceW = Math.abs(P(454).x - P(234).x);
+    const vOff = faceW * 0.15;
+
+    const lines = [
+      // 横線（上から順）
+      {id: 'hairline',   orient: 'h', px: hairlineBase + hairlineOffset,                color: 'rgba(48,209,88,1.0)',   label: detectedHairY === null ? '生え際?' : '生え際'},
+      {id: 'browBottom', orient: 'h', px: browBottomBase + offsets.browBottom * hOff,   color: 'rgba(255,214,10,1.0)',  label: '眉下'},
+      {id: 'noseBottom', orient: 'h', px: noseBottomBase + offsets.noseBottom * hOff,   color: 'rgba(255,159,10,1.0)',  label: '鼻下'},
+      {id: 'chinBottom', orient: 'h', px: chinBase + offsets.chinBottom * hOff,         color: 'rgba(255,69,58,1.0)',   label: '顎下'},
+      // 縦線
+      {id: 'faceLeft',   orient: 'v', px: P(234).x + offsets.faceLeft * vOff,           color: 'rgba(255,159,10,0.95)', label: '左輪郭'},
+      {id: 'faceRight',  orient: 'v', px: P(454).x + offsets.faceRight * vOff,          color: 'rgba(255,159,10,0.95)', label: '右輪郭'},
+      {id: 'faceCenter', orient: 'v', px: P(168).x + offsets.faceCenter * vOff,         color: 'rgba(255,69,58,1.0)',   label: '中心'},
+      {id: 'eyeInnerR',  orient: 'v', px: P(133).x + offsets.eyeInnerR * vOff,          color: 'rgba(94,192,255,0.95)', label: ''},
+      {id: 'eyeInnerL',  orient: 'v', px: P(362).x + offsets.eyeInnerL * vOff,          color: 'rgba(94,192,255,0.95)', label: ''},
+      {id: 'eyeOuterR',  orient: 'v', px: P(33).x  + offsets.eyeOuterR * vOff,          color: 'rgba(100,210,255,0.95)',label: ''},
+      {id: 'eyeOuterL',  orient: 'v', px: P(263).x + offsets.eyeOuterL * vOff,          color: 'rgba(100,210,255,0.95)',label: ''}
+    ];
+    return lines;
+  }
+
+  // === 描画 ===
+  function render(){
+    if(!currentImage) return;
+    ctx.drawImage(currentImage, 0, 0);
+    if(!currentLandmarks) return;
+
+    const w = canvas.width, h = canvas.height;
+    const lines = computeLines(currentLandmarks, w, h);
+    const s = scaleUnit();
+
+    // 実線で全ライン描画
+    ctx.save();
+    ctx.lineWidth = s * 0.9;
+    ctx.setLineDash([]);
+    lines.forEach(l => {
+      ctx.strokeStyle = l.color;
+      ctx.beginPath();
+      if(l.orient === 'h'){
+        ctx.moveTo(0, l.px); ctx.lineTo(w, l.px);
+      }else{
+        ctx.moveTo(l.px, 0); ctx.lineTo(l.px, h);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // ラベル（重複を避けるため代表ラベルのみ）
+    ctx.save();
+    const fontSize = Math.max(10, s * 11);
+    ctx.font = `600 ${fontSize}px -apple-system, sans-serif`;
+    ctx.textBaseline = 'middle';
+
+    // 横線は右端、縦線は上端
+    const labelXRight = w - s * 6;
+    const labelYTop = s * 10;
+    ctx.textAlign = 'right';
+    lines.filter(l => l.orient === 'h' && l.label).forEach(l => {
+      const tw = ctx.measureText(l.label).width;
+      ctx.fillStyle = 'rgba(13,8,5,0.72)';
+      ctx.fillRect(labelXRight - tw - s*3, l.px - fontSize/2 - s, tw + s*4, fontSize + s*2);
+      ctx.fillStyle = l.color.replace(/[\d.]+\)/, '1)');
+      ctx.fillText(l.label, labelXRight, l.px);
+    });
+    ctx.textAlign = 'center';
+    lines.filter(l => l.orient === 'v' && l.label).forEach(l => {
+      const tw = ctx.measureText(l.label).width;
+      ctx.fillStyle = 'rgba(13,8,5,0.72)';
+      ctx.fillRect(l.px - tw/2 - s*2, labelYTop - fontSize/2 - s, tw + s*4, fontSize + s*2);
+      ctx.fillStyle = l.color.replace(/[\d.]+\)/, '1)');
+      ctx.fillText(l.label, l.px, labelYTop);
+    });
+    ctx.restore();
+  }
+
+  // 診断値を再計算して更新（スライダー変更時にも呼ぶ）
+  function refreshDiagnosis(){
+    if(!currentLandmarks) return;
+    updateDiagnosis(currentLandmarks, canvas.width, canvas.height);
+  }
+
+  // === 診断カードタップで折りたたみ ===
+  document.getElementById('diagnosis').addEventListener('click', e => {
+    e.currentTarget.classList.toggle('collapsed');
+    // 展開/折りたたみでレイアウトが変わるのでcanvas再計算
+    if(currentImage){
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setupCanvas(currentImage);
+          render();
+        });
+      });
+    }
+  });
+
+  // === タブ切替 ===
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('hidden', c.dataset.tabContent !== tab);
+      });
+    });
+  });
+
+  // === スライダーイベント ===
+  document.querySelectorAll('.slider-row').forEach(row => {
+    const lineId = row.dataset.line;
+    const slider = row.querySelector('.slider');
+    slider.addEventListener('input', () => {
+      offsets[lineId] = parseFloat(slider.value);
+      row.classList.toggle('modified', Math.abs(offsets[lineId]) > 0.005);
+      render();
+      refreshDiagnosis();
+    });
+  });
+
+  // === リセット ===
+  document.getElementById('reset-all').addEventListener('click', () => {
+    Object.keys(offsets).forEach(k => { offsets[k] = 0; });
+    document.querySelectorAll('.slider-row').forEach(row => {
+      row.querySelector('.slider').value = 0;
+      row.classList.remove('modified');
+    });
+    render();
+  });
+
+  // === 写真変更 ===
+  uploadPrompt.addEventListener('click', () => fileInput.click());
+  document.getElementById('re-upload').addEventListener('click', () => fileInput.click());
+
+  // === 画像を90度回転（時計回り） ===
+  document.getElementById('rotate-btn').addEventListener('click', () => {
+    if(!currentFile){ showError('先に写真をアップロードしてください'); return; }
+    userRotation = (userRotation + 90) % 360;
+    // スライダーや診断結果は維持、画像だけを回転してから再度顔認識
+    loadImageFromFile(currentFile, userRotation);
+  });
+
+  // === 保存（iOS対応: 新タブで画像を開く） ===
+  document.getElementById('save-btn').addEventListener('click', () => {
+    if(!currentImage){ showError('先に写真をアップロードしてください'); return; }
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+
+      // iOSを含め最も確実な方法: 新タブで画像を開く → ユーザーが長押しで保存
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if(isIOS){
+        // 新タブで画像を開く
+        const newTab = window.open();
+        if(newTab){
+          newTab.document.write(`
+            <html><head><title>画像を保存</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>body{margin:0;padding:20px;background:#1a1310;color:#d4a574;font-family:-apple-system,sans-serif;text-align:center}
+            .hint{font-size:13px;padding:12px;background:rgba(193,122,79,0.15);border-radius:10px;margin-bottom:16px;line-height:1.6}
+            img{max-width:100%;border-radius:8px}</style></head>
+            <body>
+            <div class="hint">📷 画像を<strong>長押し</strong>して<br>「"写真"に追加」を選択してください</div>
+            <img src="${dataUrl}" alt="face-grid">
+            </body></html>
+          `);
+          newTab.document.close();
+        } else {
+          showError('新しいタブを開けませんでした。ブラウザの設定をご確認ください');
+        }
+      } else {
+        // PC/Android: 従来のdownload方式
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `face-grid-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch(e){
+      console.error(e);
+      showError('保存に失敗しました');
+    }
+  });
+
+  // === リサイズ対応 ===
+  window.addEventListener('resize', () => {
+    if(currentImage) setupCanvas(currentImage);
+  });
+})();
+</script>
+
+</body>
+</html>

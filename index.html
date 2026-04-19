@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Artmake Tool</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#1a1310;color:#e8d9c8;touch-action:manipulation}
+  body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+
+  .wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 22px;max-width:480px;margin:0 auto;width:100%}
+
+  .brand{text-align:center;margin-bottom:48px}
+  .brand-kicker{font-size:10px;color:#8a6244;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px}
+  .brand-title{font-family:"Georgia","游明朝",serif;font-size:22px;font-weight:500;letter-spacing:0.12em;color:#d4a574;line-height:1.5}
+  .brand-sub{font-size:11.5px;color:#a08670;margin-top:14px;line-height:1.8;letter-spacing:0.05em}
+
+  .menu{display:flex;flex-direction:column;gap:14px}
+  .card{display:block;text-decoration:none;background:linear-gradient(135deg,#2a1f1a 0%,#1f1713 100%);border:1px solid #3d2e26;border-radius:14px;padding:22px 20px;transition:border-color 0.15s,transform 0.1s;position:relative;overflow:hidden}
+  .card:active{transform:scale(0.98)}
+  .card:hover{border-color:#8a6244}
+  .card::before{content:"";position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(193,122,79,0.1) 0%,transparent 70%);pointer-events:none}
+  .card-label{font-size:9.5px;color:#c17a4f;letter-spacing:0.25em;font-weight:600;text-transform:uppercase;margin-bottom:8px}
+  .card-title{font-family:"Georgia","游明朝",serif;font-size:18px;font-weight:500;letter-spacing:0.08em;color:#d4a574;margin-bottom:10px;line-height:1.4}
+  .card-desc{font-size:11.5px;color:#a08670;line-height:1.7;letter-spacing:0.03em}
+  .card-arrow{position:absolute;top:50%;right:18px;transform:translateY(-50%);color:#8a6244;font-size:22px;font-weight:200}
+
+  .footer{text-align:center;padding:20px;color:#6d5440;font-size:9.5px;letter-spacing:0.1em;line-height:1.8}
+  .footer a{color:#8a6244;text-decoration:none}
+  .footer .credit-line{display:inline-block;margin-top:8px;color:#5a4438}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-kicker">Artmake Tool</div>
+    <div class="brand-title">アートメイク<br>サポートツール</div>
+    <div class="brand-sub">顔のバランス診断と眉デザインを<br>シミュレーションする業務補助ツール</div>
+  </div>
+
+  <div class="menu">
+    <a class="card" href="./face-grid.html">
+      <div class="card-label">Step 1 / Diagnosis</div>
+      <div class="card-title">グリッド線診断</div>
+      <div class="card-desc">顔全体のバランスを縦横のグリッド線で可視化。求心・遠心、上重心・下重心、中顔面の確認に。</div>
+      <div class="card-arrow">›</div>
+    </a>
+
+    <a class="card" href="./eyebrow-golden-ratio.html">
+      <div class="card-label">Step 2 / Design</div>
+      <div class="card-title">眉の黄金比チェッカー</div>
+      <div class="card-desc">4種の基本眉（ナチュラル・平行・アーチ・ピーク）を自動計算。顧客との認識合わせに。</div>
+      <div class="card-arrow">›</div>
+    </a>
+  </div>
+</div>
+
+<div class="footer">
+  ※ 全処理は端末内で完結します<br>
+  画像はサーバーに送信されません<br>
+  <span class="credit-line">Powered by <a href="https://google.github.io/mediapipe/" target="_blank" rel="noopener">MediaPipe</a> (Apache 2.0)</span>
+</div>
+</body>
+</html>

@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>眉の黄金比チェッカー</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#1a1310;color:#e8d9c8;touch-action:manipulation}
+  body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+  header{padding:env(safe-area-inset-top) 14px 8px;background:linear-gradient(180deg,#2a1f1a 0%,#1a1310 100%);border-bottom:1px solid #3d2e26;flex-shrink:0}
+  header > div{padding-top:6px}
+  .header-inner{display:flex;align-items:center;gap:10px}
+  .back-link{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid #3d2e26;border-radius:50%;color:#c17a4f;text-decoration:none;font-size:17px;line-height:1;flex-shrink:0;padding-bottom:2px}
+  .back-link:active{transform:scale(0.92);background:rgba(193,122,79,0.12)}
+  h1{font-family:"Georgia","游明朝",serif;font-size:13px;font-weight:500;letter-spacing:0.1em;color:#d4a574}
+  h1 span{color:#8a6244;font-size:10px;margin-left:6px;letter-spacing:0.05em}
+
+  #canvas-area{flex:1;position:relative;background:#0d0805;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0}
+  #canvas{max-width:100%;max-height:100%;display:block}
+
+  #upload-prompt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:20px;background:#0d0805;overflow-y:auto}
+  #upload-prompt.hidden{display:none}
+  .upload-ring{width:70px;height:70px;border:1px dashed #8a6244;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:14px;flex-shrink:0}
+  .upload-ring::after{content:"＋";font-size:28px;color:#c17a4f;font-weight:300}
+  .upload-text{font-size:13px;text-align:center;line-height:1.7;color:#a08670}
+  .upload-text strong{color:#d4a574;font-weight:500}
+  .upload-tips{margin-top:22px;padding:14px 16px;background:rgba(42,31,26,0.5);border:1px solid #3d2e26;border-radius:10px;max-width:320px;width:100%}
+  .upload-tips-title{font-size:10px;color:#c17a4f;letter-spacing:0.15em;font-weight:600;margin-bottom:8px;text-transform:uppercase}
+  .upload-tips ul{list-style:none;padding:0;margin:0}
+  .upload-tips li{font-size:11.5px;color:#a08670;line-height:1.8;padding-left:14px;position:relative}
+  .upload-tips li::before{content:"・";position:absolute;left:2px;color:#8a6244}
+  .credit{margin-top:14px;font-size:9.5px;color:#5a4438;letter-spacing:0.05em;text-align:center}
+  .credit a{color:#8a6244;text-decoration:none}
+  .credit a:active{color:#c17a4f}
+
+  #loader{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(13,8,5,0.92);color:#d4a574;font-size:12px;z-index:10;letter-spacing:0.1em;flex-direction:column;gap:14px}
+  #loader.active{display:flex}
+  .spinner{width:28px;height:28px;border:2px solid #3d2e26;border-top-color:#c17a4f;border-radius:50%;animation:spin 0.8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #error-msg{position:absolute;bottom:12px;left:12px;right:12px;background:rgba(120,40,30,0.95);color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;display:none;z-index:20;line-height:1.5}
+  #error-msg.active{display:block;animation:fadein 0.2s}
+  @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+
+  #controls{flex-shrink:0;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#1a1310 0%,#0d0805 100%);border-top:1px solid #3d2e26}
+
+  .label{font-size:9px;color:#8a6244;text-transform:uppercase;letter-spacing:0.18em;margin:2px 2px 5px;font-weight:500}
+
+  .btn-row{display:flex;gap:5px;margin-bottom:6px}
+  .btn{flex:1;padding:9px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.6);color:#a08670;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.15s;min-height:36px;font-family:inherit}
+  .btn:active{transform:scale(0.97)}
+  .btn.active{background:linear-gradient(180deg,#c17a4f 0%,#a06038 100%);color:#fff;border-color:#c17a4f;box-shadow:0 0 0 1px rgba(193,122,79,0.3)}
+
+  .toggle-row{display:flex;gap:5px;margin-bottom:8px}
+  .toggle{flex:1;padding:7px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.4);color:#8a6244;border-radius:7px;font-size:10px;font-weight:500;cursor:pointer;min-height:32px;font-family:inherit;transition:all 0.15s}
+  .toggle.hidden{display:none}
+  .toggle:active{transform:scale(0.97)}
+  .toggle.active{background:rgba(138,98,68,0.25);color:#d4a574;border-color:#8a6244}
+
+  .action-row{display:flex;gap:6px}
+  .action-row.hidden{display:none}
+  .action{flex:1;padding:9px;background:transparent;color:#a08670;border:1px solid #3d2e26;border-radius:7px;font-size:11px;cursor:pointer;min-height:34px;font-family:inherit;font-weight:500}
+  .action:active{transform:scale(0.97)}
+  .action.primary{background:#3d2e26;color:#d4a574;border-color:#5a4438}
+
+  .adj-status-row{display:flex;align-items:center;padding:4px 2px;min-height:24px}
+  .adj-status{color:#6d5440;font-size:10px;letter-spacing:0.05em;line-height:1.3}
+
+  /* タブ */
+  .tab-row{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid #3d2e26;padding-bottom:6px}
+  .tab-btn{flex:1;padding:7px;background:transparent;color:#6d5440;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.08em}
+  .tab-btn.active{background:rgba(193,122,79,0.15);color:#d4a574}
+  .tab-btn:active{transform:scale(0.97)}
+  .tab-body{height:170px;position:relative;margin-bottom:8px}
+  .tab-content{position:absolute;top:0;left:0;right:0;bottom:0}
+  .tab-content.hidden{display:none}
+
+  /* 調整ボタン */
+  .adj-btn{flex:1;padding:9px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.5);color:#d4a574;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;min-height:36px;font-family:inherit;transition:background 0.1s}
+  .adj-btn:active{transform:scale(0.94);background:rgba(193,122,79,0.25)}
+
+  /* 色ボタン */
+  .color-row{display:flex;gap:4px}
+  .color-btn{flex:1;padding:8px 2px;border:1px solid #3d2e26;background:rgba(42,31,26,0.5);color:#a08670;border-radius:7px;font-size:10px;font-weight:500;cursor:pointer;min-height:38px;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .color-btn .cdot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.15)}
+  .color-btn.active{background:rgba(193,122,79,0.2);border-color:#c17a4f;color:#d4a574}
+  .color-btn:active{transform:scale(0.95)}
+
+  input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;left:-9999px}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><a class="back-link" href="./index.html" aria-label="メニューへ戻る">‹</a><h1>眉の黄金比チェッカー <span>Artmake Tool</span></h1></div></header>
+
+<div id="canvas-area">
+  <canvas id="canvas"></canvas>
+  <div id="upload-prompt">
+    <div class="upload-ring"></div>
+    <div class="upload-text"><strong>正面向きの顔写真</strong>をタップ<br>画像は端末内で処理されます</div>
+    <div class="upload-tips">
+      <div class="upload-tips-title">撮影のコツ</div>
+      <ul>
+        <li>顔全体（髪の生え際〜顎）が写るように</li>
+        <li>正面向き・カメラ目線で</li>
+        <li>顎を引きすぎず・上げすぎず</li>
+        <li>明るい均一光、影が出ない環境で</li>
+        <li>前髪で眉が隠れないように</li>
+        <li>首の傾き軽度なら自動で補正されます</li>
+      </ul>
+    </div>
+    <div class="credit">Powered by <a href="https://google.github.io/mediapipe/" target="_blank" rel="noopener">MediaPipe</a> (Apache 2.0)</div>
+  </div>
+  <div id="loader"><div class="spinner"></div><div>顔を検出しています…</div></div>
+  <div id="error-msg"></div>
+  <input type="file" id="file-input" accept="image/*">
+</div>
+
+<div id="controls">
+  <div class="tab-row">
+    <button class="tab-btn active" data-tab="basic">基本</button>
+    <button class="tab-btn" data-tab="adjust">調整</button>
+    <button class="tab-btn" data-tab="color">色</button>
+  </div>
+
+  <div class="tab-body">
+  <div class="tab-content" data-tab-content="basic">
+    <div class="label">眉デザイン</div>
+    <div class="btn-row">
+      <button class="btn preset-btn active" data-preset="natural">ナチュラル</button>
+      <button class="btn preset-btn" data-preset="parallel">平行</button>
+      <button class="btn preset-btn" data-preset="arch">アーチ</button>
+      <button class="btn preset-btn" data-preset="peak">ピーク</button>
+    </div>
+    <div class="label">描画スタイル</div>
+    <div class="btn-row">
+      <button class="btn active" data-mode="line">輪郭</button>
+      <button class="btn" data-mode="fill">塗り</button>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle active" data-toggle="showGuides">基準線</button>
+      <button class="toggle" data-toggle="removeOriginal">元眉削除</button>
+      <button class="toggle hidden" data-toggle="debug" id="debug-toggle">検証</button>
+    </div>
+  </div>
+
+  <div class="tab-content hidden" data-tab-content="adjust">
+    <div class="label">位置（左右対称）</div>
+    <div class="btn-row">
+      <button class="adj-btn" data-adj="offsetX" data-step="-1">← 外</button>
+      <button class="adj-btn" data-adj="offsetX" data-step="1">内 →</button>
+      <button class="adj-btn" data-adj="offsetY" data-step="-1">↑ 上</button>
+      <button class="adj-btn" data-adj="offsetY" data-step="1">下 ↓</button>
+    </div>
+    <div class="label">幅 / 太さ</div>
+    <div class="btn-row">
+      <button class="adj-btn" data-adj="widthScale" data-step="-0.02">幅－</button>
+      <button class="adj-btn" data-adj="widthScale" data-step="0.02">幅＋</button>
+      <button class="adj-btn" data-adj="thicknessScale" data-step="-0.03">細く</button>
+      <button class="adj-btn" data-adj="thicknessScale" data-step="0.03">太く</button>
+    </div>
+    <div class="adj-status-row">
+      <div class="adj-status" id="adj-status">調整値: リセット状態</div>
+    </div>
+  </div>
+
+  <div class="tab-content hidden" data-tab-content="color">
+    <div class="label">色</div>
+    <div class="color-row">
+      <button class="color-btn active" data-color="brown"><span class="cdot" style="background:#5a3a25"></span>濃茶</button>
+      <button class="color-btn" data-color="lightbrown"><span class="cdot" style="background:#8c5f38"></span>明茶</button>
+      <button class="color-btn" data-color="ash"><span class="cdot" style="background:#6d5940"></span>アッシュ</button>
+      <button class="color-btn" data-color="gray"><span class="cdot" style="background:#6e6358"></span>グレー</button>
+      <button class="color-btn" data-color="black"><span class="cdot" style="background:#2a1f1a"></span>黒</button>
+    </div>
+  </div>
+  </div>
+
+  <div class="action-row" data-action-row="basic">
+    <button class="action" id="re-upload">写真変更</button>
+    <button class="action primary" id="save-btn">画像を保存</button>
+  </div>
+  <div class="action-row hidden" data-action-row="adjust">
+    <button class="action" id="reset-adjust">調整をリセット</button>
+    <button class="action primary" id="save-btn-adjust">画像を保存</button>
+  </div>
+  <div class="action-row hidden" data-action-row="color">
+    <button class="action" id="reset-color">色をリセット</button>
+    <button class="action primary" id="save-btn-color">画像を保存</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+<script>
+(()=>{
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const fileInput = document.getElementById('file-input');
+  const uploadPrompt = document.getElementById('upload-prompt');
+  const loader = document.getElementById('loader');
+  const errorMsg = document.getElementById('error-msg');
+
+  let currentImage = null;
+  let currentLandmarks = null;
+  let faceMesh = null;
+
+  const state = {
+    mode: 'line',
+    showGuides: true,
+    removeOriginal: false,
+    debug: false,
+    tab: 'basic',
+    color: 'brown',
+    preset: 'natural',
+    adjust: {
+      offsetX: 0,
+      offsetY: 0,
+      widthScale: 1.0,
+      thicknessScale: 1.0
+    }
+  };
+
+  // 4種の眉デザインプリセット
+  // peakPos: 眉山X位置の基準
+  //   'iris_outer'     = 黒目外側
+  //   'white_edge'     = 白目ふち（目尻直上）
+  //   'between_2_3'    = 黒目外側と白目ふちの中間（眉頭から2/3）
+  // angleDeg: 眉頭→眉山のアンダーラインの角度
+  //   眉山のY位置はこの角度と眉頭→眉山の幅から自動決定
+  //   眉尻Yは眉頭Yよりわずかに上（眉山高さの25%）で固定
+  // shapeHead/Tail: 'curve' or 'straight' （眉頭〜眉山 / 眉山〜眉尻のライン形状）
+  const PRESETS = {
+    natural: {
+      label: 'ナチュラル',
+      peakPos: 'between_2_3',
+      angleDeg: 10,
+      shapeHead: 'curve',
+      shapeTail: 'curve'
+    },
+    parallel: {
+      label: '平行',
+      peakPos: 'white_edge',
+      angleDeg: 5,
+      shapeHead: 'straight',
+      shapeTail: 'straight'
+    },
+    arch: {
+      label: 'アーチ',
+      peakPos: 'iris_outer',
+      angleDeg: 10,
+      shapeHead: 'curve',
+      shapeTail: 'curve'
+    },
+    peak: {
+      label: 'ピーク',
+      peakPos: 'between_2_3',
+      angleDeg: 15,
+      shapeHead: 'straight',
+      shapeTail: 'straight'
+    }
+  };
+
+  // 色プリセット（line/fill/hair 用にそれぞれ定義）
+  const COLORS = {
+    brown: {
+      line: 'rgba(110, 65, 40, 0.95)',
+      fillStart: 'rgba(70, 40, 22, 0.88)',
+      fillMid: 'rgba(100, 58, 33, 0.72)',
+      fillEnd: 'rgba(130, 80, 52, 0.55)',
+      hair: 'rgba(88, 55, 35, 0.88)'
+    },
+    lightbrown: {
+      line: 'rgba(155, 110, 72, 0.9)',
+      fillStart: 'rgba(115, 78, 48, 0.82)',
+      fillMid: 'rgba(145, 105, 72, 0.68)',
+      fillEnd: 'rgba(175, 135, 100, 0.52)',
+      hair: 'rgba(135, 92, 62, 0.85)'
+    },
+    ash: {
+      line: 'rgba(108, 90, 72, 0.9)',
+      fillStart: 'rgba(72, 58, 42, 0.85)',
+      fillMid: 'rgba(98, 80, 60, 0.7)',
+      fillEnd: 'rgba(125, 105, 82, 0.55)',
+      hair: 'rgba(92, 75, 58, 0.87)'
+    },
+    gray: {
+      line: 'rgba(110, 100, 92, 0.88)',
+      fillStart: 'rgba(78, 70, 62, 0.82)',
+      fillMid: 'rgba(102, 92, 82, 0.67)',
+      fillEnd: 'rgba(128, 118, 108, 0.5)',
+      hair: 'rgba(95, 85, 75, 0.85)'
+    },
+    black: {
+      line: 'rgba(38, 28, 22, 0.95)',
+      fillStart: 'rgba(18, 12, 8, 0.92)',
+      fillMid: 'rgba(38, 28, 20, 0.78)',
+      fillEnd: 'rgba(58, 45, 35, 0.6)',
+      hair: 'rgba(28, 20, 15, 0.92)'
+    }
+  };
+
+  // ========== MediaPipe Face Mesh ==========
+  async function initFaceMesh(){
+    faceMesh = new FaceMesh({
+      locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${f}`
+    });
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults(onResults);
+  }
+
+  function onResults(results){
+    loader.classList.remove('active');
+    console.log('[FaceMesh] onResults called, faces:', results.multiFaceLandmarks ? results.multiFaceLandmarks.length : 0);
+    if(results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0){
+      currentLandmarks = results.multiFaceLandmarks[0];
+      render();
+    }else{
+      // 顔検出失敗でも画像は表示
+      if(currentImage) ctx.drawImage(currentImage, 0, 0);
+      showError('顔を検出できませんでした。正面向き・明るめ・髪で眉が隠れていない写真をお使いください。タップで閉じる。');
+    }
+  }
+
+  function showError(msg){
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('active');
+    const duration = Math.max(4500, Math.min(15000, msg.length * 120));
+    clearTimeout(showError._t);
+    showError._t = setTimeout(() => errorMsg.classList.remove('active'), duration);
+  }
+  errorMsg.addEventListener('click', () => errorMsg.classList.remove('active'));
+
+  // ========== 画像アップロード ==========
+  function loadImageFromDataUrl(dataUrl){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('DECODE_FAILED'));
+      img.src = dataUrl;
+    });
+  }
+
+  function readFileAsDataUrl(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('READ_FAILED'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function downscaleIfNeeded(img, maxSize = 1600){
+    if(img.width <= maxSize && img.height <= maxSize) return img;
+    const scale = maxSize / Math.max(img.width, img.height);
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * scale);
+    cv.height = Math.round(img.height * scale);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    const dataUrl = cv.toDataURL('image/jpeg', 0.92);
+    return await loadImageFromDataUrl(dataUrl);
+  }
+
+  // EXIF Orientation取得
+  function readExifOrientation(file){
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const view = new DataView(e.target.result);
+        if(view.getUint16(0, false) !== 0xFFD8){ resolve(1); return; }
+        const length = view.byteLength;
+        let offset = 2;
+        while(offset < length){
+          if(view.getUint16(offset + 2, false) <= 8){ resolve(1); return; }
+          const marker = view.getUint16(offset, false);
+          offset += 2;
+          if(marker === 0xFFE1){
+            if(view.getUint32(offset += 2, false) !== 0x45786966){ resolve(1); return; }
+            const little = view.getUint16(offset += 6, false) === 0x4949;
+            offset += view.getUint32(offset + 4, little);
+            const tags = view.getUint16(offset, little);
+            offset += 2;
+            for(let i = 0; i < tags; i++){
+              if(view.getUint16(offset + (i * 12), little) === 0x0112){
+                resolve(view.getUint16(offset + (i * 12) + 8, little));
+                return;
+              }
+            }
+          } else if((marker & 0xFF00) !== 0xFF00){ break; }
+          else { offset += view.getUint16(offset, false); }
+        }
+        resolve(1);
+      };
+      reader.readAsArrayBuffer(file.slice(0, 65536));
+    });
+  }
+
+  // Orientationに従って画像を正しい向きで再描画した<img>を返す
+  async function applyOrientation(img, orientation){
+    if(!orientation || orientation === 1) return img;
+    const c = document.createElement('canvas');
+    const cctx = c.getContext('2d');
+    const w = img.width, h = img.height;
+    if(orientation >= 5 && orientation <= 8){ c.width = h; c.height = w; }
+    else { c.width = w; c.height = h; }
+    switch(orientation){
+      case 2: cctx.transform(-1, 0, 0, 1, w, 0); break;
+      case 3: cctx.transform(-1, 0, 0, -1, w, h); break;
+      case 4: cctx.transform(1, 0, 0, -1, 0, h); break;
+      case 5: cctx.transform(0, 1, 1, 0, 0, 0); break;
+      case 6: cctx.transform(0, 1, -1, 0, h, 0); break;
+      case 7: cctx.transform(0, -1, -1, 0, h, w); break;
+      case 8: cctx.transform(0, -1, 1, 0, 0, w); break;
+    }
+    cctx.drawImage(img, 0, 0);
+    return await loadImageFromDataUrl(c.toDataURL('image/jpeg', 0.92));
+  }
+
+  fileInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file){ console.log('[Upload] no file selected'); return; }
+    console.log('[Upload] file:', file.name, file.type, file.size);
+
+    uploadPrompt.classList.add('hidden');
+    loader.classList.add('active');
+
+    try{
+      if(file.size === 0) throw new Error('EMPTY_FILE');
+
+      const lower = (file.name || '').toLowerCase();
+      const isHeic = lower.endsWith('.heic') || lower.endsWith('.heif')
+        || file.type === 'image/heic' || file.type === 'image/heif';
+
+      const dataUrl = await readFileAsDataUrl(file);
+      console.log('[Upload] dataUrl length:', dataUrl.length);
+
+      let img;
+      try{
+        // createImageBitmapでEXIF補正込みで読込（両環境で統一挙動）
+        if(typeof createImageBitmap === 'function' && file){
+          try {
+            const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+            // ImageBitmapをcanvasに描いてImageに変換
+            const tmpC = document.createElement('canvas');
+            tmpC.width = bitmap.width; tmpC.height = bitmap.height;
+            tmpC.getContext('2d').drawImage(bitmap, 0, 0);
+            img = await loadImageFromDataUrl(tmpC.toDataURL('image/jpeg', 0.92));
+          } catch(ebm){
+            console.warn('[Upload] createImageBitmap failed, fallback:', ebm);
+            img = await loadImageFromDataUrl(dataUrl);
+          }
+        } else {
+          img = await loadImageFromDataUrl(dataUrl);
+        }
+      }catch(err){
+        if(isHeic){
+          throw new Error('HEIC形式はブラウザで読めません。iPhone設定 > カメラ > フォーマット > 「互換性優先」に変更するか、写真アプリで共有→画像として保存でJPEGに変換してください。');
+        }
+        throw new Error('画像として認識できませんでした（' + (file.type || '不明な形式') + '）');
+      }
+
+      if(!img.width || !img.height) throw new Error('画像サイズが0です');
+      console.log('[Upload] image loaded:', img.width, 'x', img.height);
+
+      // 注: ブラウザが<img>でEXIF Orientationを自動補正するため、手動補正は不要
+      // モバイルSafariのcanvas上限対策でリサイズ
+      img = await downscaleIfNeeded(img, 1600);
+
+      currentImage = img;
+      currentLandmarks = null;
+      setupCanvas(img);
+
+      // 画像をまず即表示（顔検出の結果を待たない）
+      ctx.drawImage(img, 0, 0);
+      console.log('[Upload] image drawn on canvas');
+
+      if(!faceMesh){
+        if(typeof FaceMesh === 'undefined'){
+          throw new Error('MediaPipeライブラリの読み込みに失敗しました。Wi-Fi/モバイル通信を確認してください。');
+        }
+        await initFaceMesh();
+      }
+
+      try{
+        await faceMesh.send({image: img});
+      }catch(err){
+        console.error('[FaceMesh] send error:', err);
+        throw new Error('顔検出処理に失敗しました: ' + (err.message || err));
+      }
+    }catch(err){
+      console.error('[Upload] error:', err);
+      loader.classList.remove('active');
+      if(!currentImage) uploadPrompt.classList.remove('hidden');
+      showError(err.message || String(err));
+    }
+  });
+
+  uploadPrompt.addEventListener('click', () => fileInput.click());
+
+  function setupCanvas(img){
+    const area = document.getElementById('canvas-area');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ratio = Math.min(area.clientWidth / img.width, area.clientHeight / img.height);
+    canvas.style.width = (img.width * ratio) + 'px';
+    canvas.style.height = (img.height * ratio) + 'px';
+  }
+
+  // ========== 黄金比ロジック ==========
+  // 小鼻外側: 右220 / 左440
+  // 目尻(外側): 右33 / 左263
+  // 目頭(内側): 右133 / 左362
+  // 目上/下: 右159/145, 左386/374
+  // iris中心: 右468 / 左473、iris外周: 469-472, 474-477
+  // 現在の眉頭(内側寄り): 右55 / 左285
+  // 眉ランドマーク上下: 右70,63,105,66,107 + 46,53,52,65,55
+  //                     左300,293,334,296,336 + 276,283,282,295,285
+
+  // 眉ランドマーク群
+  // 上端 (眉毛の上の輪郭): 外側→内側
+  // 下端 (眉毛の下の輪郭、骨格ラインに近い): 内側→外側
+  const BROW_UPPER_IDX = {
+    right: [70, 63, 105, 66, 107],
+    left:  [300, 293, 334, 296, 336]
+  };
+  const BROW_LOWER_IDX = {
+    right: [55, 65, 52, 53, 46],
+    left:  [285, 295, 282, 283, 276]
+  };
+  // 小鼻外側（鼻翼の最外張り出し点）- 単発ID。これより外側は頬
+  const NOSTRIL_IDX = { right: 98, left: 327 };
+  // 目尻候補（目の外側周辺の複数点）- 最外端を取る
+  const EYE_OUTER_CANDIDATES = {
+    right: [33, 130, 226, 247, 7, 163],
+    left:  [263, 359, 446, 467, 249, 390]
+  };
+  const EYE_INNER_IDX = { right: 133, left: 362 };
+  const EYE_TOP_IDX = { right: 159, left: 386 };
+  const EYE_BOTTOM_IDX = { right: 145, left: 374 };
+
+  // 候補群から、顔の外側（右なら最小X、左なら最大X）にある点を選ぶ
+  function getOutermost(lm, candidates, side){
+    let best = null;
+    for(const i of candidates){
+      if(!lm[i]) continue;
+      if(!best){ best = lm[i]; continue; }
+      if(side === 'right'){
+        if(lm[i].x < best.x) best = lm[i];
+      }else{
+        if(lm[i].x > best.x) best = lm[i];
+      }
+    }
+    return best;
+  }
+
+  // ========== 傾き補正 ==========
+  // 両目の虹彩中心を結ぶ線の水平からの角度（ラジアン）を取得
+  function getFaceRoll(lm, w, h){
+    const rightIris = lm[468];
+    const leftIris = lm[473];
+    if(!rightIris || !leftIris) return 0;
+    const dx = (leftIris.x - rightIris.x) * w;
+    const dy = (leftIris.y - rightIris.y) * h;
+    return Math.atan2(dy, dx); // 水平のときは0
+  }
+
+  // 点を中心周りに回転（反時計回りを正とする通常の数学的回転）
+  function rotatePt(pt, cx, cy, angle){
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const dx = pt.x - cx, dy = pt.y - cy;
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+  }
+
+  // 両目の中点（回転中心）を画面座標で取得
+  function getEyeMidpoint(lm, w, h){
+    const rightIris = lm[468];
+    const leftIris = lm[473];
+    return {
+      x: ((rightIris.x + leftIris.x) / 2) * w,
+      y: ((rightIris.y + leftIris.y) / 2) * h
+    };
+  }
+
+  function calculateBrow(side, lm, w, h){
+    // 顔の傾き角を取得し、全ランドマークを逆回転して水平化座標系にする
+    const roll = getFaceRoll(lm, w, h);
+    const center = getEyeMidpoint(lm, w, h);
+    // ランドマーク取得関数: 画面座標 → 逆回転して水平化座標
+    const P = i => {
+      const raw = { x: lm[i].x * w, y: lm[i].y * h };
+      return rotatePt(raw, center.x, center.y, -roll);
+    };
+    // 候補群から最外端を取った後に回転適用する版
+    const Pouter = (candidates) => {
+      const raw = getOutermost(lm, candidates, side);
+      return rotatePt({ x: raw.x * w, y: raw.y * h }, center.x, center.y, -roll);
+    };
+    // 眉頭下端ランドマーク取得（水平化座標）
+    const getBrowHeadRot = () => {
+      const eyeInner = lm[EYE_INNER_IDX[side]];
+      let best = null, minDx = Infinity;
+      const eyeInnerRot = rotatePt({x: eyeInner.x * w, y: eyeInner.y * h}, center.x, center.y, -roll);
+      for(const i of BROW_LOWER_IDX[side]){
+        if(!lm[i]) continue;
+        const rot = rotatePt({x: lm[i].x * w, y: lm[i].y * h}, center.x, center.y, -roll);
+        const dx = Math.abs(rot.x - eyeInnerRot.x);
+        if(dx < minDx){ minDx = dx; best = rot; }
+      }
+      return best;
+    };
+    // 虹彩外端取得（水平化座標）
+    const getIrisOuterRot = () => {
+      const centerIdx = side === 'right' ? 468 : 473;
+      const irisStart = side === 'right' ? 469 : 474;
+      const eyeOuterRaw = getOutermost(lm, EYE_OUTER_CANDIDATES[side], side);
+      if(!lm[centerIdx]) return rotatePt({x: eyeOuterRaw.x * w, y: eyeOuterRaw.y * h}, center.x, center.y, -roll);
+      let best = lm[centerIdx], minD = Infinity;
+      for(let i = irisStart; i < irisStart + 4; i++){
+        if(!lm[i]) continue;
+        const dx = lm[i].x - eyeOuterRaw.x, dy = lm[i].y - eyeOuterRaw.y;
+        const d = dx*dx + dy*dy;
+        if(d < minD){ minD = d; best = lm[i]; }
+      }
+      return rotatePt({x: best.x * w, y: best.y * h}, center.x, center.y, -roll);
+    };
+
+    const nostril = P(NOSTRIL_IDX[side]);
+    const eyeOuter = Pouter(EYE_OUTER_CANDIDATES[side]);
+    const eyeTop = P(EYE_TOP_IDX[side]);
+    const eyeBottom = P(EYE_BOTTOM_IDX[side]);
+    const irisOuter = getIrisOuterRot();
+    const browHead = getBrowHeadRot();
+
+    // 以下、水平化座標で黄金比を計算
+    const preset = PRESETS[state.preset] || PRESETS.natural;
+    const headX = nostril.x;
+    const headY = browHead.y;
+
+    // 眉尻X: 目尻の真上〜わずかに外側（目幅の15%だけ外側に延長）
+    const eyeInner = P(EYE_INNER_IDX[side]);
+    const eyeWidth = Math.abs(eyeOuter.x - eyeInner.x);
+    const sideDir = side === 'right' ? -1 : 1; // 右眉は外側=-X、左眉は外側=+X（水平化座標）
+    const tailX = eyeOuter.x + sideDir * eyeWidth * 0.15;
+    const browLength = Math.abs(tailX - headX);
+
+    // 眉山X: プリセット指定の位置
+    const irisOuterX = irisOuter.x;
+    const whiteEdgeX = eyeOuter.x;
+    let peakX;
+    if(preset.peakPos === 'iris_outer'){
+      peakX = irisOuterX;
+    }else if(preset.peakPos === 'white_edge'){
+      peakX = whiteEdgeX;
+    }else{ // between_2_3: 眉頭から2/3の位置
+      peakX = headX + (tailX - headX) * (2/3);
+    }
+
+    // 眉山Y: 眉頭→眉山のアンダーラインが指定角度
+    // 「眉のアンダーラインの角度」= 眉頭から眉山までの傾き
+    const headPeakWidth = Math.abs(peakX - headX);
+    const peakY = headY - headPeakWidth * Math.tan(preset.angleDeg * Math.PI / 180);
+
+    // 眉尻Y: 眉頭と同様もしくはわずかに上の位置
+    // 眉山→眉尻は緩やかに下がるだけ。眉頭Yからわずかに上の位置（眉山の上昇量の25%程度）
+    const peakRise = headY - peakY; // 眉山が眉頭より何ピクセル上か
+    const tailY = headY - peakRise * 0.25;
+
+    // 太さ: 目の縦幅の2/3 を基準に、眉頭〜眉山〜眉尻で変化
+    // 太さ比率: 眉頭7mm、眉山6mm相当、眉尻は自然に細くなる
+    // 相対比: 眉頭1.0 : 眉山0.85 : 眉尻0.55
+    const eyeHeight = Math.abs(eyeBottom.y - eyeTop.y);
+    const thickness = eyeHeight * (2/3);
+    const thHead = thickness;
+    const thPeak = thickness * 0.85;
+    const thTail = thickness * 0.55;
+
+    // 計算結果を画面座標系に正回転で戻す
+    const head = rotatePt({x: headX, y: headY}, center.x, center.y, roll);
+    const peak = rotatePt({x: peakX, y: peakY}, center.x, center.y, roll);
+    const tail = rotatePt({x: tailX, y: tailY}, center.x, center.y, roll);
+    const nostrilBack = rotatePt(nostril, center.x, center.y, roll);
+    const eyeOuterBack = rotatePt(eyeOuter, center.x, center.y, roll);
+    const eyeInnerBack = rotatePt(eyeInner, center.x, center.y, roll);
+    const irisOuterBack = rotatePt(irisOuter, center.x, center.y, roll);
+    const eyeTopBack = rotatePt(eyeTop, center.x, center.y, roll);
+    const eyeBottomBack = rotatePt(eyeBottom, center.x, center.y, roll);
+    const browHeadBack = rotatePt(browHead, center.x, center.y, roll);
+
+    return {
+      head: {x: head.x, y: head.y, th: thHead},
+      peak: {x: peak.x, y: peak.y, th: thPeak},
+      tail: {x: tail.x, y: tail.y, th: thTail},
+      // 眉の回転角（描画時に太さ方向を顔の垂直に合わせるため）
+      rollAngle: roll,
+      nostril: nostrilBack,
+      eyeOuter: eyeOuterBack,
+      eyeInner: eyeInnerBack,
+      irisOuter: irisOuterBack,
+      eyeTop: eyeTopBack,
+      eyeBottom: eyeBottomBack,
+      browHead: browHeadBack
+    };
+  }
+
+  // ========== 描画 ==========
+  // ユーザー調整を眉データに適用（左右対称: offsetXは内側方向に統一）
+  function applyAdjustments(brow, side){
+    const a = state.adjust;
+    const xDir = side === 'right' ? 1 : -1; // 画面右側の眉は内側=+X、画面左側の眉は内側=-X
+    // 幅スケール: peakXを中心に head/tail をスケール
+    const centerX = brow.peak.x;
+    const headX = centerX + (brow.head.x - centerX) * a.widthScale + xDir * a.offsetX;
+    const peakX = brow.peak.x + xDir * a.offsetX;
+    const tailX = centerX + (brow.tail.x - centerX) * a.widthScale + xDir * a.offsetX;
+    return {
+      ...brow,
+      head: {x: headX, y: brow.head.y + a.offsetY, th: brow.head.th * a.thicknessScale},
+      peak: {x: peakX, y: brow.peak.y + a.offsetY, th: brow.peak.th * a.thicknessScale},
+      tail: {x: tailX, y: brow.tail.y + a.offsetY, th: brow.tail.th * a.thicknessScale}
+    };
+  }
+
+  function render(){
+    if(!currentImage) return;
+    ctx.drawImage(currentImage, 0, 0);
+    if(!currentLandmarks) return;
+    const w = canvas.width, h = canvas.height;
+
+    if(state.removeOriginal){
+      removeOriginalBrows(currentLandmarks, w, h);
+    }
+
+    let right = calculateBrow('right', currentLandmarks, w, h);
+    let left  = calculateBrow('left',  currentLandmarks, w, h);
+    right = applyAdjustments(right, 'right');
+    left  = applyAdjustments(left,  'left');
+
+    if(state.showGuides){
+      drawGuides(right);
+      drawGuides(left);
+    }
+
+    if(state.mode === 'line'){
+      drawBrowLine(right);
+      drawBrowLine(left);
+    }else if(state.mode === 'fill'){
+      drawBrowFill(right);
+      drawBrowFill(left);
+    }
+
+    if(state.debug){
+      drawDebug(right, 'R');
+      drawDebug(left, 'L');
+    }
+  }
+
+  function drawDebug(b, side){
+    const s = scaleUnit();
+    const pts = [
+      {p: b.nostril, c: '#ff3b30', label: '鼻'+side},
+      {p: b.eyeOuter, c: '#34c759', label: '目尻'+side},
+      {p: b.eyeInner, c: '#30d158', label: '目頭'+side},
+      {p: b.eyeTop, c: '#32ade6', label: '目上'+side},
+      {p: b.eyeBottom, c: '#64d2ff', label: '目下'+side},
+      {p: b.irisOuter, c: '#ff9500', label: '黒目'+side},
+      {p: b.browHead, c: '#af52de', label: '眉頭'+side}
+    ];
+    ctx.save();
+    ctx.font = `600 ${Math.max(9, s * 10)}px -apple-system, sans-serif`;
+    pts.forEach(({p, c, label}) => {
+      ctx.fillStyle = c;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = s;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, s * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      const tw = ctx.measureText(label).width;
+      ctx.fillRect(p.x + s*4, p.y - s*7, tw + s*4, s*12);
+      ctx.fillStyle = c;
+      ctx.fillText(label, p.x + s*6, p.y + s*3);
+    });
+    ctx.restore();
+  }
+
+  function scaleUnit(){ return Math.max(1, canvas.width / 600); }
+
+  function drawGuides(b){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(212, 165, 116, 0.55)';
+    ctx.lineWidth = scaleUnit();
+    ctx.setLineDash([6, 5]);
+    // 小鼻→眉頭(垂直)
+    ctx.beginPath();
+    ctx.moveTo(b.nostril.x, b.nostril.y);
+    ctx.lineTo(b.head.x, b.head.y);
+    ctx.stroke();
+    // 小鼻→目尻→眉尻
+    ctx.beginPath();
+    ctx.moveTo(b.nostril.x, b.nostril.y);
+    ctx.lineTo(b.tail.x, b.tail.y);
+    ctx.stroke();
+    // 小鼻→黒目→眉山
+    ctx.beginPath();
+    ctx.moveTo(b.nostril.x, b.nostril.y);
+    ctx.lineTo(b.peak.x, b.peak.y);
+    ctx.stroke();
+    ctx.restore();
+
+    // 交点のハイライト小円
+    [b.head, b.peak, b.tail].forEach(pt => {
+      ctx.save();
+      ctx.fillStyle = 'rgba(212, 165, 116, 0.7)';
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, scaleUnit() * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // Catmull-Rom スプライン（端点重複で始点・終点も通る）
+  function catmullRomPath(points){
+    const pts = [points[0], ...points, points[points.length - 1]];
+    const out = [];
+    out.push({x: points[0].x, y: points[0].y});
+    for(let i = 0; i < pts.length - 3; i++){
+      const p0 = pts[i], p1 = pts[i+1], p2 = pts[i+2], p3 = pts[i+3];
+      for(let t = 0.02; t <= 1; t += 0.04){
+        const t2 = t*t, t3 = t2*t;
+        const x = 0.5 * ((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x)*t3);
+        const y = 0.5 * ((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y)*t3);
+        out.push({x, y});
+      }
+    }
+    return out;
+  }
+
+  // 直線用パス生成（2区間それぞれを直線補間）
+  function straightPath(points){
+    // points = [head, peak, tail] の3点をそれぞれ直線補間
+    const out = [points[0]];
+    const seg = 20;
+    for(let i = 1; i <= seg; i++){
+      const t = i / seg;
+      out.push({
+        x: points[0].x + (points[1].x - points[0].x) * t,
+        y: points[0].y + (points[1].y - points[0].y) * t
+      });
+    }
+    for(let i = 1; i <= seg; i++){
+      const t = i / seg;
+      out.push({
+        x: points[1].x + (points[2].x - points[1].x) * t,
+        y: points[1].y + (points[2].y - points[1].y) * t
+      });
+    }
+    return out;
+  }
+
+  // 眉頭〜眉山 / 眉山〜眉尻 を個別の形状（直線 or 曲線）で描画するためのパス生成
+  // shape = {head: 'curve'|'straight', tail: 'curve'|'straight'}
+  // 直線指定でも眉山付近は微小な丸みを持たせ、自然な見た目にする
+  function shapedPath(points, shape){
+    // 完全に同じ形状（両方曲線）ならCatmull-Romをそのまま使用
+    if(shape.head === 'curve' && shape.tail === 'curve'){
+      return catmullRomPath(points);
+    }
+
+    // 直線を含む場合: 眉山(points[1])の周辺 ±cornerRadius を曲線でブレンド
+    const [head, peak, tail] = points;
+    const headPeakLen = Math.hypot(peak.x - head.x, peak.y - head.y);
+    const peakTailLen = Math.hypot(tail.x - peak.x, tail.y - peak.y);
+    // 角の丸め半径: 短い方の区間の15%（最大で区間の30%まで）
+    const cornerLen = Math.min(headPeakLen, peakTailLen) * 0.15;
+    const headRatio = cornerLen / headPeakLen;
+    const tailRatio = cornerLen / peakTailLen;
+
+    // 眉山の手前の点（頭側）と後ろの点（尻側）
+    const pA = {
+      x: peak.x - (peak.x - head.x) * headRatio,
+      y: peak.y - (peak.y - head.y) * headRatio
+    };
+    const pB = {
+      x: peak.x + (tail.x - peak.x) * tailRatio,
+      y: peak.y + (tail.y - peak.y) * tailRatio
+    };
+
+    // 頭側: head → pA
+    const headSeg = shape.head === 'straight'
+      ? linearSegment(head, pA, 16)
+      : smoothSegment([head, head, pA, pB], 16);
+    // 角丸部分: pA → peak → pB を二次ベジェで滑らかに
+    const cornerSeg = quadCurveSegment(pA, peak, pB, 12);
+    // 尻側: pB → tail
+    const tailSeg = shape.tail === 'straight'
+      ? linearSegment(pB, tail, 16)
+      : smoothSegment([pA, pB, tail, tail], 16);
+
+    // 連結（重複点を除く）
+    return [...headSeg, ...cornerSeg.slice(1), ...tailSeg.slice(1)];
+  }
+
+  // 二次ベジェ曲線（制御点経由で2点を滑らかに繋ぐ）
+  function quadCurveSegment(p0, control, p1, seg){
+    const out = [];
+    for(let i = 0; i <= seg; i++){
+      const t = i / seg;
+      const mt = 1 - t;
+      out.push({
+        x: mt*mt*p0.x + 2*mt*t*control.x + t*t*p1.x,
+        y: mt*mt*p0.y + 2*mt*t*control.y + t*t*p1.y
+      });
+    }
+    return out;
+  }
+
+  function linearSegment(p0, p1, seg){
+    const out = [];
+    for(let i = 0; i <= seg; i++){
+      const t = i / seg;
+      out.push({
+        x: p0.x + (p1.x - p0.x) * t,
+        y: p0.y + (p1.y - p0.y) * t
+      });
+    }
+    return out;
+  }
+
+  // 4制御点のCatmull-Romスプライン1区間分
+  function smoothSegment(ctrlPts, seg){
+    const [p0, p1, p2, p3] = ctrlPts;
+    const out = [{x: p1.x, y: p1.y}];
+    for(let i = 1; i <= seg; i++){
+      const t = i / seg;
+      const t2 = t*t, t3 = t2*t;
+      out.push({
+        x: 0.5 * ((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x)*t3),
+        y: 0.5 * ((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y)*t3)
+      });
+    }
+    return out;
+  }
+
+  // 顔の回転を考慮した「眉の垂直方向」単位ベクトル取得
+  // 顔がroll度傾いているなら、太さ方向もroll度傾ける
+  function getBrowVertical(b){
+    const roll = b.rollAngle || 0;
+    // 顔が水平の時、太さ方向は画面のY軸（下向き正）
+    // 顔がroll回転している時、太さ方向も同じだけ回転
+    return {
+      x: -Math.sin(roll), // 上方向
+      y: -Math.cos(roll)
+    };
+  }
+
+  // 眉の上下端点を「顔の垂直方向」に展開して求める
+  // 基準点 (head/peak/tail の x,y) = 眉の下端ライン上の点。
+  // 太さは下端から「上方向」にのみ展開する（眉頭Y = 骨格の眉下ラインという黄金比定義に忠実）
+  function getBrowEdgePoints(b){
+    const up = getBrowVertical(b);
+    return {
+      // 上端 = 基準点から太さ分だけ「上」
+      top: [
+        {x: b.head.x + up.x * b.head.th, y: b.head.y + up.y * b.head.th},
+        {x: b.peak.x + up.x * b.peak.th, y: b.peak.y + up.y * b.peak.th},
+        {x: b.tail.x + up.x * b.tail.th, y: b.tail.y + up.y * b.tail.th}
+      ],
+      // 下端 = 基準点そのもの
+      bot: [
+        {x: b.head.x, y: b.head.y},
+        {x: b.peak.x, y: b.peak.y},
+        {x: b.tail.x, y: b.tail.y}
+      ]
+    };
+  }
+
+  function drawBrowLine(b){
+    const {top: topPts, bot: botPts} = getBrowEdgePoints(b);
+    const preset = PRESETS[state.preset] || PRESETS.natural;
+    const shape = {head: preset.shapeHead, tail: preset.shapeTail};
+    const topCurve = shapedPath(topPts, shape);
+    const botCurve = shapedPath(botPts, shape);
+    ctx.save();
+    ctx.strokeStyle = COLORS[state.color].line;
+    ctx.lineWidth = scaleUnit() * 1.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(topCurve[0].x, topCurve[0].y);
+    for(let i = 1; i < topCurve.length; i++) ctx.lineTo(topCurve[i].x, topCurve[i].y);
+    ctx.lineTo(botCurve[botCurve.length - 1].x, botCurve[botCurve.length - 1].y);
+    for(let i = botCurve.length - 2; i >= 0; i--) ctx.lineTo(botCurve[i].x, botCurve[i].y);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBrowFill(b){
+    const {top: topPts, bot: botPtsReverse} = getBrowEdgePoints(b);
+    const botPts = [botPtsReverse[2], botPtsReverse[1], botPtsReverse[0]]; // 逆順
+    const preset = PRESETS[state.preset] || PRESETS.natural;
+    const shape = {head: preset.shapeHead, tail: preset.shapeTail};
+    // 下縁は逆順なので形状も逆にマッピング
+    const topCurve = shapedPath(topPts, shape);
+    const botCurve = shapedPath(botPts, {head: shape.tail, tail: shape.head});
+    ctx.save();
+    const c = COLORS[state.color];
+    const grad = ctx.createLinearGradient(b.head.x, b.head.y, b.tail.x, b.tail.y);
+    grad.addColorStop(0,   c.fillStart);
+    grad.addColorStop(0.5, c.fillMid);
+    grad.addColorStop(1,   c.fillEnd);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(topCurve[0].x, topCurve[0].y);
+    for(let i = 1; i < topCurve.length; i++) ctx.lineTo(topCurve[i].x, topCurve[i].y);
+    for(let i = 0; i < botCurve.length; i++) ctx.lineTo(botCurve[i].x, botCurve[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ========== 元眉の除去（肌色ペイント） ==========
+  function removeOriginalBrows(lm, w, h){
+    const rightIdx = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
+    const leftIdx  = [300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
+    // 肌色サンプリング用: 頬・額のランドマーク
+    // 右頬: 117, 右額: 67  左頬: 346, 左額: 297
+    const rightSampleIdx = [67, 117, 123];
+    const leftSampleIdx = [297, 346, 352];
+    paintBrow(lm, rightIdx, rightSampleIdx, w, h);
+    paintBrow(lm, leftIdx, leftSampleIdx, w, h);
+  }
+
+  function paintBrow(lm, browIdx, sampleIdx, w, h){
+    const pts = browIdx.map(i => ({x: lm[i].x * w, y: lm[i].y * h}));
+
+    // 周辺肌色サンプル（複数ポイント平均、眉以外の領域から）
+    const colors = [];
+    sampleIdx.forEach(i => {
+      if(!lm[i]) return;
+      const sx = Math.round(lm[i].x * w);
+      const sy = Math.round(lm[i].y * h);
+      try{
+        const px = ctx.getImageData(sx, sy, 3, 3).data;
+        let r=0, g=0, b=0, n=0;
+        for(let k=0; k<px.length; k+=4){ r+=px[k]; g+=px[k+1]; b+=px[k+2]; n++; }
+        colors.push([r/n, g/n, b/n]);
+      }catch(e){}
+    });
+    if(colors.length === 0) return;
+    const avg = colors.reduce((a,c) => [a[0]+c[0], a[1]+c[1], a[2]+c[2]], [0,0,0]).map(v => v/colors.length);
+    const skin = `rgb(${Math.round(avg[0])}, ${Math.round(avg[1])}, ${Math.round(avg[2])})`;
+
+    // 凸包を作成して多層塗り（中心→外でフェザー効果）
+    const cx = pts.reduce((s,p)=>s+p.x,0)/pts.length;
+    const cy = pts.reduce((s,p)=>s+p.y,0)/pts.length;
+    const expand = (scale) => pts.map(p => ({
+      x: cx + (p.x - cx) * scale,
+      y: cy + (p.y - cy) * scale * 1.35
+    }));
+    const hull = convexHull(expand(1.35));
+
+    ctx.save();
+    ctx.fillStyle = skin;
+    // 1回目: 大きめに塗り + ブラー
+    ctx.shadowColor = skin;
+    ctx.shadowBlur = Math.max(8, scaleUnit() * 14);
+    ctx.beginPath();
+    ctx.moveTo(hull[0].x, hull[0].y);
+    for(let i = 1; i < hull.length; i++) ctx.lineTo(hull[i].x, hull[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fill(); // 重ねてフェザー強化
+    ctx.shadowBlur = 0;
+    // 2回目: 内側をクリア塗り
+    const inner = convexHull(expand(1.15));
+    ctx.beginPath();
+    ctx.moveTo(inner[0].x, inner[0].y);
+    for(let i = 1; i < inner.length; i++) ctx.lineTo(inner[i].x, inner[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 簡易凸包（Andrew's monotone chain）
+  function convexHull(points){
+    const pts = points.slice().sort((a,b) => a.x - b.x || a.y - b.y);
+    if(pts.length < 3) return pts;
+    const cross = (O, A, B) => (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+    const lower = [];
+    for(const p of pts){
+      while(lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    const upper = [];
+    for(let i = pts.length - 1; i >= 0; i--){
+      const p = pts[i];
+      while(upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    lower.pop(); upper.pop();
+    return lower.concat(upper);
+  }
+
+  // ========== UIバインド ==========
+  document.querySelectorAll('.btn[data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn[data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.mode = btn.dataset.mode;
+      render();
+    });
+  });
+
+  document.querySelectorAll('.toggle[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.toggle;
+      state[key] = !state[key];
+      btn.classList.toggle('active', state[key]);
+      render();
+    });
+  });
+
+  // 管理者モード: ?debug=1 で検証ボタンを表示
+  if(new URLSearchParams(location.search).has('debug')){
+    const dbg = document.getElementById('debug-toggle');
+    if(dbg) dbg.classList.remove('hidden');
+  }
+
+  // プリセットボタン
+  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.preset = btn.dataset.preset;
+      document.querySelectorAll('.preset-btn[data-preset]').forEach(b => b.classList.toggle('active', b === btn));
+      render();
+    });
+  });
+
+  // タブ切替
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      state.tab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('hidden', c.dataset.tabContent !== tab);
+      });
+      document.querySelectorAll('.action-row[data-action-row]').forEach(r => {
+        r.classList.toggle('hidden', r.dataset.actionRow !== tab);
+      });
+    });
+  });
+
+  // 調整ボタン
+  function updateAdjustStatus(){
+    const a = state.adjust;
+    const el = document.getElementById('adj-status');
+    if(!el) return;
+    const isReset = Math.abs(a.offsetX) < 0.5 && Math.abs(a.offsetY) < 0.5 && a.widthScale === 1 && a.thicknessScale === 1;
+    if(isReset){
+      el.textContent = '調整値: リセット状態';
+    }else{
+      const browLen = getBrowReferenceLength() || 1;
+      const parts = [];
+      if(Math.abs(a.offsetX) >= 0.5) parts.push(`位置X:${a.offsetX > 0 ? '+' : ''}${Math.round(a.offsetX/browLen*100)}%`);
+      if(Math.abs(a.offsetY) >= 0.5) parts.push(`位置Y:${a.offsetY > 0 ? '+' : ''}${Math.round(a.offsetY/browLen*100)}%`);
+      if(a.widthScale !== 1) parts.push(`幅:${Math.round(a.widthScale*100)}%`);
+      if(a.thicknessScale !== 1) parts.push(`太さ:${Math.round(a.thicknessScale*100)}%`);
+      el.textContent = parts.join(' ');
+    }
+  }
+
+  // 眉の基準全長を取得（調整の可動範囲とステップ計算に使う）
+  function getBrowReferenceLength(){
+    if(!currentLandmarks) return 100;
+    const w = canvas.width, h = canvas.height;
+    const right = calculateBrow('right', currentLandmarks, w, h);
+    return Math.abs(right.tail.x - right.head.x);
+  }
+
+  document.querySelectorAll('.adj-btn[data-adj]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.adj;
+      const step = parseFloat(btn.dataset.step);
+      const browLen = getBrowReferenceLength();
+
+      if(key === 'offsetX'){
+        // ステップ: 眉全長の0.5%、制限: 眉全長の±20%
+        const pxStep = step * browLen * 0.005;
+        const limit = browLen * 0.20;
+        state.adjust[key] = Math.max(-limit, Math.min(limit, state.adjust[key] + pxStep));
+      }else if(key === 'offsetY'){
+        // ステップ: 眉全長の0.5%、制限: 眉全長の±15%
+        const pxStep = step * browLen * 0.005;
+        const limit = browLen * 0.15;
+        state.adjust[key] = Math.max(-limit, Math.min(limit, state.adjust[key] + pxStep));
+      }else if(key === 'widthScale'){
+        state.adjust[key] = +(state.adjust[key] + step).toFixed(3);
+        state.adjust[key] = Math.max(0.7, Math.min(1.3, state.adjust[key]));
+      }else if(key === 'thicknessScale'){
+        state.adjust[key] = +(state.adjust[key] + step).toFixed(3);
+        state.adjust[key] = Math.max(0.5, Math.min(1.8, state.adjust[key]));
+      }
+      updateAdjustStatus();
+      render();
+    });
+  });
+
+  document.getElementById('reset-adjust').addEventListener('click', () => {
+    state.adjust = { offsetX: 0, offsetY: 0, widthScale: 1.0, thicknessScale: 1.0 };
+    updateAdjustStatus();
+    render();
+  });
+
+  // 色ボタン
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.color = btn.dataset.color;
+      document.querySelectorAll('.color-btn').forEach(b => b.classList.toggle('active', b === btn));
+      render();
+    });
+  });
+
+  // 保存・写真変更の複数ボタン対応
+  function saveImage(){
+    if(!currentImage){ showError('先に写真をアップロードしてください'); return; }
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eyebrow-golden-ratio-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  }
+
+  ['save-btn', 'save-btn-adjust', 'save-btn-color'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('click', saveImage);
+  });
+
+  ['re-upload'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('click', () => fileInput.click());
+  });
+
+  // 色リセット
+  document.getElementById('reset-color').addEventListener('click', () => {
+    state.color = 'brown';
+    document.querySelectorAll('.color-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === 'brown');
+    });
+    render();
+  });
+
+  // リサイズでcanvas表示を追従
+  window.addEventListener('resize', () => {
+    if(currentImage) setupCanvas(currentImage);
+  });
+})();
+</script>
+</body>
+</html>
