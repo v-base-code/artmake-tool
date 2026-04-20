@@ -7,7 +7,7 @@
 <title>グリッド線診断</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#1a1310;color:#e8d9c8;touch-action:manipulation}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;background:#1a1310;color:#e8d9c8;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   body{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
   header{padding:env(safe-area-inset-top) 14px 8px;background:linear-gradient(180deg,#2a1f1a 0%,#1a1310 100%);border-bottom:1px solid #3d2e26;flex-shrink:0}
@@ -18,8 +18,8 @@
   h1{font-family:"Georgia","游明朝",serif;font-size:13px;font-weight:500;letter-spacing:0.1em;color:#d4a574}
   h1 span{color:#8a6244;font-size:10px;margin-left:6px;letter-spacing:0.05em}
 
-  #canvas-area{flex:1;position:relative;background:#0d0805;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0}
-  #canvas{max-width:100%;max-height:100%;display:block}
+  #canvas-area{flex:1;position:relative;background:#0d0805;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0;touch-action:none}
+  #canvas{max-width:100%;max-height:100%;display:block;touch-action:none}
 
   #upload-prompt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:20px;background:#0d0805;overflow-y:auto}
   #upload-prompt.hidden{display:none}
@@ -263,6 +263,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
 <script>
 (()=>{
+  // === iPad Safari等でのピンチズーム・ダブルタップズーム防止 ===
+  // user-scalable=no でも効かない場合があるためJSで明示的にブロック
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+  // ダブルタップズーム防止
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if(now - lastTouchEnd < 350){ e.preventDefault(); }
+    lastTouchEnd = now;
+  }, { passive: false });
+
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   const fileInput = document.getElementById('file-input');
@@ -306,9 +319,13 @@
   function setupCanvas(img){
     const area = document.getElementById('canvas-area');
     const aw = area.clientWidth, ah = area.clientHeight;
+    // サイズが取得できない場合（レイアウト未確定時）は処理を中断
+    // 画像が消えることを防ぐ
+    if(aw <= 0 || ah <= 0) return;
     canvas.width = img.width;
     canvas.height = img.height;
     const scale = Math.min(aw / img.width, ah / img.height);
+    if(!isFinite(scale) || scale <= 0) return;
     canvas.style.width = (img.width * scale) + 'px';
     canvas.style.height = (img.height * scale) + 'px';
   }
@@ -893,8 +910,28 @@
   });
 
   // === リサイズ対応 ===
-  window.addEventListener('resize', () => {
-    if(currentImage) setupCanvas(currentImage);
+  // 重要: resizeイベントでsetupCanvasだけ呼ぶと、canvas.widthへの代入で
+  // Canvasがクリアされる副作用により画像が消える。必ずrender()も呼ぶこと。
+  // iPadのピンチズーム、スクロール、アドレスバー表示/非表示などでresizeが頻発するため
+  // デバウンス処理で連打を防ぐ。
+  let resizeTimer = null;
+  function handleResize(){
+    if(!currentImage) return;
+    if(resizeTimer) cancelAnimationFrame(resizeTimer);
+    resizeTimer = requestAnimationFrame(() => {
+      setupCanvas(currentImage);
+      render();
+    });
+  }
+  window.addEventListener('resize', handleResize);
+  // iPad Safari対策: visualViewport変化にも追従
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+  }
+  // orientation変化（iPadを縦↔横に回転）
+  window.addEventListener('orientationchange', () => {
+    setTimeout(handleResize, 300); // orientation変化直後はサイズ取得が不正確なため遅延
   });
 })();
 </script>
